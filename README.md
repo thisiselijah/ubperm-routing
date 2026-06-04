@@ -5,4 +5,8 @@ The project is about the permutation routing with deflection on an unbuffered hy
 ## Component
 This project includes a core algorithm module and a visualization module. We also write a script to evaluate the algorithm against a baseline algorithm, which is BFS.
 
+- [ ] algorithm module
+- [ ] script to evaluate the algorithm
+- [ ] visualization module
+
 ## Result
