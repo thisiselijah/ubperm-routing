@@ -3,11 +3,13 @@
 // 輸出：一個包含所有交換順序的 vector
 // compile: g++ -O3 main.cpp -o bin/routing
 
+
 #include <iostream>
 #include <vector>
 #include <string>
 #include <sstream>
 #include <queue>
+#include <cstdint>
 #include <unordered_map>
 #include <algorithm>
 
@@ -98,19 +100,50 @@ public:
         }
         return false;
     }
+
+    bool solveWithBitonicSort(std::vector<int>& current_perm, std::vector<std::pair<int, int>>& swap_order) {
+        int num_nodes = current_perm.size(); 
+
+        for (int k = 2; k <= num_nodes; k *= 2) {
+            
+            for (int j = k / 2; j > 0; j /= 2) {
+                
+                for (int i = 0; i < num_nodes; i++) {
+                    
+                    int neighbor = i ^ j; // 透過 XOR 找到這個維度上的相鄰節點
+                    
+                    if (i < neighbor) {
+                        
+                        bool ascending_order = ((i & k) == 0);
+                        
+                        if ((current_perm[i] > current_perm[neighbor]) == ascending_order) {
+                            std::swap(current_perm[i], current_perm[neighbor]);
+                            swap_order.push_back({i, neighbor});
+                        }
+                    }
+                }
+            }
+        }
+
+        for (int i = 0; i < num_nodes; ++i) {
+            if (current_perm[i] != i) return false;
+        }
+        return true;
+    }
 };
 
 int main(int argc, char *argv[]) {
     // 檢查參數數量是否足夠 (程式名稱 + 模式 + 陣列)
-    if (argc < 3) {
-        std::cerr << "Usage: " << argv[0] << " <mode> <comma_separated_numbers>\n";
+    if (argc < 4) {
+        std::cerr << "Usage: " << argv[0] << "<algo> <mode> <comma_separated_numbers>\n";
         std::cerr << "Modes: -default (verbose output) or -test (integer output only)\n";
-        std::cerr << "Example: " << argv[0] << " -default 7,6,5,4,3,2,1,0\n";
+        std::cerr << "Example: " << argv[0] << " -mergesort -default 7,6,5,4,3,2,1,0\n";
         return 1;
     }
 
-    std::string mode = argv[1];
-    std::string input = argv[2];
+    std::string algo = argv[1];
+    std::string mode = argv[2];
+    std::string input = argv[3];
     bool isTestMode = (mode == "-test");
 
     if (mode != "-default" && mode != "-test") {
@@ -135,7 +168,21 @@ int main(int argc, char *argv[]) {
     }
 
     std::vector<std::pair<int, int>> swap_order;
-    if (router.solveWithBFS(swap_order)) {
+    bool success = false; // 新增：用來記錄演算法是否成功找到路徑
+
+    // 根據指令決定呼叫哪一種演算法 ▼▼▼
+    if (algo == "bfs") {
+        success = router.solveWithBFS(swap_order);
+    } else if (algo == "mergesort") {
+        std::vector<int> current_perm = perm; // 複製一份陣列讓排序演算法去操作
+        success = router.solveWithBitonicSort(current_perm, swap_order);
+    } else {
+        if (isTestMode) std::cout << "-1\n";
+        else std::cerr << "Error: Unknown algorithm. Use bfs or mergesort.\n";
+        return 1;
+    }
+
+    if (success) { 
         // 根據模式決定輸出格式
         if (isTestMode) {
             std::cout << swap_order.size() << "\n";
@@ -143,7 +190,8 @@ int main(int argc, char *argv[]) {
             if (swap_order.empty()) {
                 std::cout << "The array is already sorted. Swaps required: 0\n";
             } else {
-                std::cout << "Target aligned using BFS. Swaps required: " << swap_order.size() << "\n\n";
+                std::string algo_name = (algo == "-bfs") ? "BFS" : "Merge Sort";
+                std::cout << "Target aligned using " << algo_name << ". Swaps required: " << swap_order.size() << "\n\n";
                 std::cout << "Swap Order Vector List:\n";
                 for (size_t i = 0; i < swap_order.size(); ++i) {
                     std::cout << "Step " << (i + 1) << ": Swap index " 

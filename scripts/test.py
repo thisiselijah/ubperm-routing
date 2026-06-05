@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-def run_cpp_case(perm_tuple, exe_path):
+def run_cpp_case(perm_tuple, exe_path, algo):
     """
     呼叫 C++ 執行檔並回傳交換步數。
     強制使用 -test 模式以利解析。
@@ -22,7 +22,7 @@ def run_cpp_case(perm_tuple, exe_path):
     try:
         # 在參數列中加入 "-test" 標籤
         result = subprocess.run(
-            [exe_path, "-test", perm_str], 
+            [exe_path, algo, "-test", perm_str], 
             capture_output=True, 
             text=True, 
             check=True
@@ -37,7 +37,8 @@ def main():
     parser = argparse.ArgumentParser(description="Hypercube Routing Test Runner")
     parser.add_argument("-cube", type=int, required=True, help="超立方體維度 (例如 3 代表 8 個數字，4 代表 16 個數字)")
     parser.add_argument("-exe", type=str, default="src/bin/routing", help="C++ 執行檔的路徑")
-    
+    parser.add_argument("-algo", type=str, default="-bfs", help="演算法 (-bfs 或 -mergesort)")
+
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("-auto", action="store_true", help="窮舉並執行所有可能的排列 (警告：僅適用於 N=8)")
     group.add_argument("-text", type=str, help="從文字檔讀取測資 (每行一組逗號分隔的陣列)")
@@ -80,7 +81,7 @@ def main():
     results = []
     
     with ThreadPoolExecutor() as executor:
-        futures = {executor.submit(run_cpp_case, c, args.exe): c for c in cases}
+        futures = {executor.submit(run_cpp_case, c, args.exe, args.algo): c for c in cases}
         
         # 將原本的進度顯示區塊改成這樣：
         completed = 0
@@ -116,7 +117,8 @@ def main():
         plt.text(bar.get_x() + bar.get_width()/2, yval + (max(y_axis)*0.01), 
                  int(yval), ha='center', va='bottom', fontsize=9)
 
-    plt.title(f"Hypercube Permutation Routing (N={n}) - BFS Search Steps Distribution", fontsize=14)
+    display_name = "Merge Sort" if "mergesort" in args.algo.lower() else "BFS"// 之後新增演算法再回來改寫法
+    plt.title(f"Hypercube Permutation Routing (N={n}) - {display_name} Steps Distribution", fontsize=14)
     plt.xlabel("Number of Swaps (Steps)", fontsize=12)
     plt.ylabel("Number of Cases", fontsize=12)
     
