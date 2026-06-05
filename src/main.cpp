@@ -1,7 +1,8 @@
 // 輸入：(1) a, b, c, d, e, f, g, h
 //      (2) a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p 
 // 輸出：一個包含所有交換順序的 vector
-// compile: g++ -O3 main.cpp -o bin\routing
+// compile: g++ -O3 main.cpp -o bin/routing
+
 #include <iostream>
 #include <vector>
 #include <string>
@@ -10,7 +11,6 @@
 #include <unordered_map>
 #include <algorithm>
 
-// 超立方體繞徑路由器類別
 class HypercubeRouter {
 private:
     int n;
@@ -18,7 +18,6 @@ private:
     uint64_t start_state;
     uint64_t target_state;
 
-    // 將排列陣列壓縮為單一 64-bit 整數
     uint64_t pack_state(const std::vector<int>& perm) const {
         uint64_t state = 0;
         for (size_t i = 0; i < perm.size(); ++i) {
@@ -27,7 +26,6 @@ private:
         return state;
     }
 
-    // 產生目標排序狀態：[0, 1, 2, ..., n-1]
     uint64_t get_target_state(int size) const {
         uint64_t state = 0;
         for (int i = 0; i < size; ++i) {
@@ -37,7 +35,6 @@ private:
     }
 
 public:
-    // 建構子：初始化狀態
     HypercubeRouter(const std::vector<int>& perm) {
         n = perm.size();
         bit_levels = (n == 8) ? 3 : 4;
@@ -45,16 +42,12 @@ public:
         target_state = get_target_state(n);
     }
 
-    // 檢查輸入大小是否合法
     bool isValidSize() const {
         return (n == 8 || n == 16);
     }
 
-    // 核心 BFS 函式：已更名為 solveWithBFS
     bool solveWithBFS(std::vector<std::pair<int, int>>& swap_order) {
-        if (start_state == target_state) {
-            return true;
-        }
+        if (start_state == target_state) return true;
 
         std::queue<uint64_t> q;
         std::unordered_map<uint64_t, std::pair<uint64_t, std::pair<int, int>>> parent;
@@ -76,7 +69,6 @@ public:
             for (int i = 0; i < n; ++i) {
                 for (int b = 0; b < bit_levels; ++b) {
                     int j = i ^ (1 << b);
-                    
                     if (i < j) {
                         uint64_t val_i = (curr >> (i * 4)) & 15ULL;
                         uint64_t val_j = (curr >> (j * 4)) & 15ULL;
@@ -104,22 +96,29 @@ public:
             std::reverse(swap_order.begin(), swap_order.end());
             return true;
         }
-
         return false;
     }
-    
-    // 未來可以繼續在這裡加入：
-    // bool solveWithConstructive(std::vector<std::pair<int, int>>& swap_order) { ... }
 };
 
 int main(int argc, char *argv[]) {
-    if (argc < 2) {
-        std::cerr << "Usage: " << argv[0] << " <comma_separated_numbers>\n";
-        std::cerr << "Example: " << argv[0] << " 15,0,10,4,3,11,1,7,8,5,6,2,12,9,14,13\n";
+    // 檢查參數數量是否足夠 (程式名稱 + 模式 + 陣列)
+    if (argc < 3) {
+        std::cerr << "Usage: " << argv[0] << " <mode> <comma_separated_numbers>\n";
+        std::cerr << "Modes: -default (verbose output) or -test (integer output only)\n";
+        std::cerr << "Example: " << argv[0] << " -default 7,6,5,4,3,2,1,0\n";
         return 1;
     }
 
-    std::string input = argv[1];
+    std::string mode = argv[1];
+    std::string input = argv[2];
+    bool isTestMode = (mode == "-test");
+
+    if (mode != "-default" && mode != "-test") {
+        if (isTestMode) std::cout << "-1\n";
+        else std::cerr << "Error: Invalid mode. Use -default or -test.\n";
+        return 1;
+    }
+
     std::stringstream ss(input);
     std::string token;
     std::vector<int> perm;
@@ -129,31 +128,36 @@ int main(int argc, char *argv[]) {
     }
 
     HypercubeRouter router(perm);
-
     if (!router.isValidSize()) {
-        std::cerr << "Error: The input must contain exactly 8 or 16 numbers.\n";
+        if (isTestMode) std::cout << "-1\n";
+        else std::cerr << "Error: The input must contain exactly 8 or 16 numbers.\n";
         return 1;
     }
 
     std::vector<std::pair<int, int>> swap_order;
-    
-    // 呼叫更名後的函式
-    bool success = router.solveWithBFS(swap_order);
-
-    if (success) {
-        if (swap_order.empty()) {
-            std::cout << "The array is already sorted. Swaps required: 0\n";
+    if (router.solveWithBFS(swap_order)) {
+        // 根據模式決定輸出格式
+        if (isTestMode) {
+            std::cout << swap_order.size() << "\n";
         } else {
-            std::cout << "Target aligned using BFS. Swaps required: " << swap_order.size() << "\n\n";
-            std::cout << "Swap Order Vector List:\n";
-            for (size_t i = 0; i < swap_order.size(); ++i) {
-                std::cout << "Step " << (i + 1) << ": Swap index " 
-                          << swap_order[i].first << " and " << swap_order[i].second << "\n";
+            if (swap_order.empty()) {
+                std::cout << "The array is already sorted. Swaps required: 0\n";
+            } else {
+                std::cout << "Target aligned using BFS. Swaps required: " << swap_order.size() << "\n\n";
+                std::cout << "Swap Order Vector List:\n";
+                for (size_t i = 0; i < swap_order.size(); ++i) {
+                    std::cout << "Step " << (i + 1) << ": Swap index " 
+                              << swap_order[i].first << " and " << swap_order[i].second << "\n";
+                }
             }
         }
+        return 0;
     } else {
-        std::cout << "No valid bit-level routing path found.\n";
+        if (isTestMode) {
+            std::cout << "-1\n";
+        } else {
+            std::cout << "No valid bit-level routing path found.\n";
+        }
+        return 1;
     }
-
-    return 0;
 }
