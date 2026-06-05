@@ -8,6 +8,7 @@
 #include <string>
 #include <sstream>
 #include <queue>
+#include <cstdint>
 #include <unordered_map>
 #include <algorithm>
 
