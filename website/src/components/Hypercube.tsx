@@ -11,29 +11,37 @@ interface NodeProps {
   position: [number, number, number];
   displayMethod: 'text' | 'color';
   shuffleTrigger: number;
+  isSwapping?: boolean | null;
 }
 
-const Node = ({ id, packet, position, displayMethod, shuffleTrigger }: NodeProps) => {
+const Node = ({ id, packet, position, displayMethod, shuffleTrigger, isSwapping }: NodeProps) => {
+  const activeColor = "#e91d2a"; // Dell red for swapping nodes
+  const baseColor = "#a5b8c0"; // Steel tint for resting nodes
+
   return (
     <group position={position}>
       <mesh>
         <sphereGeometry args={[0.15, 32, 32]} />
-        <meshStandardMaterial color="#cc785c" />
+        <meshStandardMaterial 
+          color={isSwapping ? activeColor : baseColor} 
+          emissive="#000000" 
+          emissiveIntensity={0} 
+        />
       </mesh>
       
       <Html center position={[0, 0.35, 0]} className="pointer-events-none">
         {displayMethod === 'text' ? (
-          <div className="bg-[var(--color-surface-dark)] text-[var(--color-on-dark)] px-2 py-1 rounded text-xs whitespace-nowrap shadow-md">
-            <div className="font-bold border-b border-[var(--color-surface-dark-elevated)] mb-1 pb-1">Node {id}</div>
-            <div className="text-[var(--color-primary)] flex gap-1">
-              Packet: <span key={`${id}-${packet}`} className={shuffleTrigger > 0 ? "animate-spin-packet" : ""}>{packet}</span>
+          <div className="bg-white text-black border border-black p-1 font-body text-[12px] whitespace-nowrap shadow-[2px_2px_0_rgba(0,0,0,1)]">
+            <div className="font-heading font-bold border-b border-black mb-1 pb-1 uppercase">Node {id}</div>
+            <div className="flex gap-1">
+              Packet: <span key={`${id}-${packet}`} className={shuffleTrigger > 0 ? "text-[var(--color-primary)] font-bold animate-spin-packet inline-block" : "font-bold"}>{packet}</span>
             </div>
           </div>
         ) : (
-          <div className="bg-[var(--color-surface-dark)] px-1.5 py-0.5 rounded text-xs whitespace-nowrap shadow-md font-bold flex gap-1.5 border border-[var(--color-surface-dark-elevated)] shadow-lg shadow-black/20">
-            <span className="text-[var(--color-on-dark)]" title="Node ID">{id}</span>
-            <span className="text-[var(--color-surface-dark-elevated)]">|</span>
-            <span key={`${id}-${packet}`} className={`text-[var(--color-primary)] ${shuffleTrigger > 0 ? "animate-spin-packet" : ""}`} title="Packet ID">{packet}</span>
+          <div className="bg-white text-black border border-black px-1.5 py-0.5 font-heading font-bold text-[12px] whitespace-nowrap shadow-[1px_1px_0_rgba(0,0,0,1)] flex gap-1.5">
+            <span title="Node ID">{id}</span>
+            <span>|</span>
+            <span key={`${id}-${packet}`} className={`text-[var(--color-primary)] ${shuffleTrigger > 0 ? "animate-spin-packet inline-block" : ""}`} title="Packet ID">{packet}</span>
           </div>
         )}
       </Html>
@@ -97,14 +105,17 @@ export default function Hypercube({ dimension, nodes, displayMethod, shuffleTrig
           <Line 
             key={`edge-${idx}`} 
             points={pts} 
-            color={isActive ? "#a9583e" : "#8e8b82"} 
-            lineWidth={isActive ? 3 : 1} 
+            color={isActive ? "#e91d2a" : "#000000"} 
+            lineWidth={isActive ? 4 : 1} 
           />
         );
       })}
-      {nodes.slice(0, numNodes).map((node, idx) => (
-        <Node key={node.id} id={node.id} packet={node.packet} position={positions[idx]} displayMethod={displayMethod} shuffleTrigger={shuffleTrigger} />
-      ))}
+      {nodes.slice(0, numNodes).map((node, idx) => {
+        const isSwapping = activeSwap && (activeSwap.node1 === node.id || activeSwap.node2 === node.id);
+        return (
+          <Node key={node.id} id={node.id} packet={node.packet} position={positions[idx]} displayMethod={displayMethod} shuffleTrigger={shuffleTrigger} isSwapping={isSwapping} />
+        );
+      })}
     </group>
   );
 }

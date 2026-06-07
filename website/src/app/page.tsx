@@ -167,57 +167,63 @@ export default function Home() {
 
   return (
     <main className="h-screen w-screen flex flex-col items-center justify-center relative overflow-hidden bg-[var(--color-canvas)]">
-      <div className="absolute top-8 left-8 z-10 p-6 bg-[var(--color-surface-soft)] rounded-lg shadow-md border border-[var(--color-hairline-soft)] max-w-sm">
-        <h1 className="text-3xl mb-2 text-[var(--color-ink)]">Routing Visualizer</h1>
-        <p className="text-[var(--color-muted-soft)] mb-6 text-sm">
-            Hypercube Deflection Routing Configuration
-        </p>
+      {/* Top Header */}
+      <div className="absolute top-0 left-0 right-0 h-16 bg-white text-black px-6 flex items-center justify-between border-b-[4px] border-black z-20">
+        <h1 className="text-2xl font-display font-black uppercase m-0 leading-none">Routing Visualizer</h1>
+        <a href="https://github.com/thisiselijah/ubperm-routing.git" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 bg-[var(--color-yellow-sticker)] text-black border border-black px-2 py-1 shadow-[2px_2px_0_#000]">
+          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+          </svg>
+          <span className="font-heading font-bold uppercase text-[12px] leading-none">GitHub</span>
+        </a>
+      </div>
 
+      <div className="absolute top-24 left-8 z-10 p-4 bg-white shadow-[4px_4px_0_#000] border-2 border-black w-72">
         <div className="mb-4">
-            <span className="block text-sm font-medium mb-1 text-[var(--color-body-strong)]">Dimension</span>
+            <span className="block text-sm font-heading font-bold mb-1 uppercase">Dimension</span>
             <div className="flex gap-2">
                 <button 
                   onClick={() => handleDimensionChange(3)}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${state.dimension === 3 ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-card)] text-[var(--color-body)]'}`}
+                  className={`px-4 py-1.5 text-[12px] font-heading font-bold uppercase border border-black ${state.dimension === 3 ? 'bg-black text-white' : 'bg-white text-black'}`}
                 >3-Cube</button>
                 <button 
                   onClick={() => handleDimensionChange(4)}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${state.dimension === 4 ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-card)] text-[var(--color-body)]'}`}
+                  className={`px-4 py-1.5 text-[12px] font-heading font-bold uppercase border border-black ${state.dimension === 4 ? 'bg-black text-white' : 'bg-white text-black'}`}
                 >4-Cube</button>
             </div>
         </div>
 
         <div className="mb-4">
-            <span className="block text-sm font-medium mb-1 text-[var(--color-body-strong)]">Label Method</span>
+            <span className="block text-sm font-heading font-bold mb-1 uppercase">Label Method</span>
             <div className="flex gap-2">
                 <button 
                   onClick={() => setDisplayMethod('text')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${displayMethod === 'text' ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-card)] text-[var(--color-body)]'}`}
+                  className={`px-4 py-1.5 text-[12px] font-heading font-bold uppercase border border-black ${displayMethod === 'text' ? 'bg-black text-white' : 'bg-white text-black'}`}
                 >Detailed</button>
                 <button 
                   onClick={() => setDisplayMethod('color')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${displayMethod === 'color' ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-card)] text-[var(--color-body)]'}`}
+                  className={`px-4 py-1.5 text-[12px] font-heading font-bold uppercase border border-black ${displayMethod === 'color' ? 'bg-black text-white' : 'bg-white text-black'}`}
                 >Compact</button>
             </div>
             {displayMethod === 'color' && (
-                <p className="mt-2 text-xs text-[var(--color-muted-soft)]">
-                    Format: <span className="text-[var(--color-ink)]">Node</span> | <span className="text-[var(--color-primary)] font-medium">Packet</span>
+                <p className="mt-2 text-xs font-body">
+                    Format: <span className="font-bold">Node</span> | <span className="text-[var(--color-primary)] font-bold">Packet</span>
                 </p>
             )}
         </div>
 
         <div className="mb-4">
-            <span className="block text-sm font-medium mb-1 text-[var(--color-body-strong)]">Algorithm</span>
+            <span className="block text-sm font-heading font-bold mb-1 uppercase">Algorithm</span>
             <div className="flex gap-2">
                 <button 
                   onClick={() => setAlgo('merge')}
                   disabled={isRouting}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${algo === 'merge' ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-card)] text-[var(--color-body)]'} disabled:opacity-50`}
+                  className={`px-4 py-1.5 text-[12px] font-heading font-bold uppercase border border-black ${algo === 'merge' ? 'bg-black text-white' : 'bg-white text-black'} disabled:opacity-50`}
                 >Merge Sort</button>
                 <button 
                   onClick={() => setAlgo('bfs')}
                   disabled={isRouting}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${algo === 'bfs' ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-card)] text-[var(--color-body)]'} disabled:opacity-50`}
+                  className={`px-4 py-1.5 text-[12px] font-heading font-bold uppercase border border-black ${algo === 'bfs' ? 'bg-black text-white' : 'bg-white text-black'} disabled:opacity-50`}
                 >BFS</button>
             </div>
         </div>
@@ -225,7 +231,7 @@ export default function Home() {
         <button 
           onClick={handleShuffle}
           disabled={isRouting}
-          className="w-full mt-4 bg-[var(--color-ink)] hover:bg-[var(--color-body-strong)] disabled:opacity-50 text-[var(--color-canvas)] px-4 py-2 rounded-md font-medium transition-colors"
+          className="w-full mt-4 bg-white text-black border border-black px-4 py-1.5 text-[12px] font-heading font-bold uppercase disabled:opacity-50"
         >
           Randomly Permutate
         </button>
@@ -233,43 +239,37 @@ export default function Home() {
         <button 
           onClick={handleRoute}
           disabled={isRouting}
-          className="w-full mt-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-active)] disabled:opacity-50 text-[var(--color-on-primary)] px-4 py-2 rounded-md font-medium transition-colors flex items-center justify-center gap-2"
+          className="w-full mt-2 bg-[var(--color-primary)] text-white border border-black px-4 py-1.5 text-[12px] font-heading font-bold uppercase disabled:opacity-50"
         >
-          {isRouting ? (
-            <>
-              <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Routing...
-            </>
-          ) : "Route"}
+          {isRouting ? "Routing..." : "Route"}
         </button>
       </div>
 
       {/* Right panel: Swap Steps */}
-      <div className="absolute top-8 right-8 z-10 w-64 max-h-[80vh] flex flex-col bg-[var(--color-surface-soft)] rounded-lg shadow-md border border-[var(--color-hairline-soft)] overflow-hidden">
-        <div className="p-4 border-b border-[var(--color-hairline-soft)] bg-[var(--color-surface-card)]">
-          <h2 className="font-medium text-sm text-[var(--color-ink)]">Swap Steps</h2>
-          <div className="text-xs text-[var(--color-muted-soft)] mt-1">Total: {swapList.length} swaps</div>
+      <div className="absolute top-24 right-8 z-10 w-64 max-h-[80vh] flex flex-col bg-white border-2 border-black shadow-[4px_4px_0_#000] overflow-hidden">
+        <div className="p-4 border-b-2 border-black bg-[var(--color-tint-periwinkle)]">
+          <h2 className="font-heading font-bold text-sm uppercase m-0">Swap Steps</h2>
+          <div className="text-xs font-body mt-1">Total: {swapList.length} swaps</div>
         </div>
-        <div ref={stepListRef} className="flex-1 overflow-y-auto p-4 space-y-2">
+        <div ref={stepListRef} className="flex-1 overflow-y-auto p-4 space-y-2 font-body">
           {swapList.map((swap, idx) => (
-            <div key={idx} className={`p-2 rounded text-xs border ${idx === currentStep ? 'bg-[var(--color-surface-cream-strong)] border-[var(--color-ink)] text-[var(--color-ink)] font-medium' : 'bg-[var(--color-surface-card)] border-[var(--color-hairline-soft)] text-[var(--color-body)]'}`}>
+            <div key={idx} className={`p-2 text-xs border border-black ${idx === currentStep ? 'bg-black text-white font-bold' : 'bg-white text-black'}`}>
               <span className="font-bold">Step {idx + 1}:</span> Node {swap.node1} ↔ Node {swap.node2}
             </div>
           ))}
           {swapList.length === 0 && (
-            <div className="text-xs text-[var(--color-muted-soft)] text-center italic py-4">No routing sequence active</div>
+            <div className="text-xs text-center italic py-4">No routing sequence active</div>
           )}
         </div>
       </div>
 
-      <div className="w-full h-full">
-        <Canvas camera={{ position: [0, 0, 10], fov: 50 }}>
-          <OrbitControls makeDefault />
-          <Hypercube dimension={state.dimension} nodes={state.nodes} displayMethod={displayMethod} shuffleTrigger={shuffleTrigger} activeSwap={activeSwap} />
-        </Canvas>
+      <div className="w-full h-full pt-24 pb-8 pl-[352px] pr-[320px]">
+        <div className="w-full h-full bg-white border-4 border-black overflow-hidden relative">
+          <Canvas camera={{ position: [0, 0, 10], fov: 50 }}>
+            <OrbitControls makeDefault />
+            <Hypercube dimension={state.dimension} nodes={state.nodes} displayMethod={displayMethod} shuffleTrigger={shuffleTrigger} activeSwap={activeSwap} />
+          </Canvas>
+        </div>
       </div>
     </main>
   );
