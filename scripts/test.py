@@ -9,7 +9,7 @@ import argparse
 import subprocess
 import itertools
 import sys
-import matplotlib.pyplot as plt
+import os
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -20,9 +20,9 @@ def run_cpp_case(perm_tuple, exe_path, algo):
     """
     perm_str = ",".join(map(str, perm_tuple))
     try:
-        # 在參數列中加入 "-test" 標籤
+        # 在參數列中加入 "-algo", algo, "-test" 標籤
         result = subprocess.run(
-            [exe_path, algo, "-test", perm_str], 
+            [exe_path, "-algo", algo, "-test", perm_str], 
             capture_output=True, 
             text=True, 
             check=True
@@ -37,7 +37,7 @@ def main():
     parser = argparse.ArgumentParser(description="Hypercube Routing Test Runner")
     parser.add_argument("-cube", type=int, required=True, help="超立方體維度 (例如 3 代表 8 個數字，4 代表 16 個數字)")
     parser.add_argument("-exe", type=str, default="src/bin/routing", help="C++ 執行檔的路徑")
-    parser.add_argument("-algo", type=str, default="-bfs", help="演算法 (-bfs 或 -mergesort)")
+    parser.add_argument("-algo", type=str, default="bfs", help="演算法 (bfs 或 merge)")
 
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("-auto", action="store_true", help="窮舉並執行所有可能的排列 (警告：僅適用於 N=8)")
@@ -102,31 +102,19 @@ def main():
         print(f"注意：有 {errors} 筆測資執行失敗或找不到路徑。")
 
     if not valid_steps:
-        print("沒有有效的結果可供繪圖。")
+        print("沒有有效的結果可供儲存。")
         sys.exit(0)
 
-    step_counts = Counter(valid_steps)
-    x_axis = sorted(step_counts.keys())
-    y_axis = [step_counts[x] for x in x_axis]
-
-    plt.figure(figsize=(10, 6))
-    bars = plt.bar(x_axis, y_axis, color='skyblue', edgecolor='black')
+    # 確保 data 資料夾存在
+    os.makedirs("data", exist_ok=True)
     
-    for bar in bars:
-        yval = bar.get_height()
-        plt.text(bar.get_x() + bar.get_width()/2, yval + (max(y_axis)*0.01), 
-                 int(yval), ha='center', va='bottom', fontsize=9)
-
-    display_name = "Merge Sort" if "mergesort" in args.algo.lower() else "BFS"// 之後新增演算法再回來改寫法
-    plt.title(f"Hypercube Permutation Routing (N={n}) - {display_name} Steps Distribution", fontsize=14)
-    plt.xlabel("Number of Swaps (Steps)", fontsize=12)
-    plt.ylabel("Number of Cases", fontsize=12)
-    
-    plt.xticks(range(min(x_axis), max(x_axis) + 1))
-    
-    plt.grid(axis='y', linestyle='--', alpha=0.7)
-    plt.tight_layout()
-    plt.show()
+    # 儲存結果到檔案
+    output_file = f"data/{args.algo}.txt"
+    with open(output_file, "w") as f:
+        for steps in valid_steps:
+            f.write(f"{steps}\n")
+            
+    print(f"結果已成功儲存至 {output_file}，共 {len(valid_steps)} 筆有效數據。")
 
 if __name__ == "__main__":
     main()
