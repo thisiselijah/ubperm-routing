@@ -1,7 +1,7 @@
 // 輸入：(1) a, b, c, d, e, f, g, h
 //      (2) a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p 
 // 輸出：一個包含所有交換順序的 vector
-// compile: g++ -O3 main.cpp -o bin/routing
+// compile: g++ -O3 src/main.cpp -o bin/routing
 
 
 #include <iostream>
@@ -105,17 +105,11 @@ public:
         int num_nodes = current_perm.size(); 
 
         for (int k = 2; k <= num_nodes; k *= 2) {
-            
             for (int j = k / 2; j > 0; j /= 2) {
-                
                 for (int i = 0; i < num_nodes; i++) {
-                    
                     int neighbor = i ^ j; // 透過 XOR 找到這個維度上的相鄰節點
-                    
                     if (i < neighbor) {
-                        
                         bool ascending_order = ((i & k) == 0);
-                        
                         if ((current_perm[i] > current_perm[neighbor]) == ascending_order) {
                             std::swap(current_perm[i], current_perm[neighbor]);
                             swap_order.push_back({i, neighbor});
