@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import Hypercube from "@/components/Hypercube";
@@ -22,6 +22,17 @@ export default function Home() {
     dimension: 3,
     nodes: Array.from({ length: 8 }, (_, i) => ({ id: i, packet: i }))
   });
+
+  const stepListRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (stepListRef.current && currentStep >= 0) {
+      const activeElement = stepListRef.current.children[currentStep] as HTMLElement;
+      if (activeElement) {
+        activeElement.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    }
+  }, [currentStep]);
 
   const fetchData = async () => {
     try {
@@ -214,7 +225,7 @@ export default function Home() {
         <button 
           onClick={handleShuffle}
           disabled={isRouting}
-          className="w-full mt-4 bg-[var(--color-ink)] hover:bg-[var(--color-body-strong)] disabled:opacity-50 text-white px-4 py-2 rounded-md font-medium transition-colors"
+          className="w-full mt-4 bg-[var(--color-ink)] hover:bg-[var(--color-body-strong)] disabled:opacity-50 text-[var(--color-canvas)] px-4 py-2 rounded-md font-medium transition-colors"
         >
           Randomly Permutate
         </button>
@@ -222,7 +233,7 @@ export default function Home() {
         <button 
           onClick={handleRoute}
           disabled={isRouting}
-          className="w-full mt-2 bg-[var(--color-primary)] hover:bg-blue-600 disabled:opacity-50 text-white px-4 py-2 rounded-md font-medium transition-colors flex items-center justify-center gap-2"
+          className="w-full mt-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-active)] disabled:opacity-50 text-[var(--color-on-primary)] px-4 py-2 rounded-md font-medium transition-colors flex items-center justify-center gap-2"
         >
           {isRouting ? (
             <>
@@ -242,9 +253,9 @@ export default function Home() {
           <h2 className="font-medium text-sm text-[var(--color-ink)]">Swap Steps</h2>
           <div className="text-xs text-[var(--color-muted-soft)] mt-1">Total: {swapList.length} swaps</div>
         </div>
-        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+        <div ref={stepListRef} className="flex-1 overflow-y-auto p-4 space-y-2">
           {swapList.map((swap, idx) => (
-            <div key={idx} className={`p-2 rounded text-xs border ${idx === currentStep ? 'bg-[var(--color-primary-soft)] border-[var(--color-primary)] text-blue-800 font-medium' : 'bg-[var(--color-surface)] border-[var(--color-hairline-soft)] text-[var(--color-body)]'}`}>
+            <div key={idx} className={`p-2 rounded text-xs border ${idx === currentStep ? 'bg-[var(--color-surface-cream-strong)] border-[var(--color-ink)] text-[var(--color-ink)] font-medium' : 'bg-[var(--color-surface-card)] border-[var(--color-hairline-soft)] text-[var(--color-body)]'}`}>
               <span className="font-bold">Step {idx + 1}:</span> Node {swap.node1} ↔ Node {swap.node2}
             </div>
           ))}

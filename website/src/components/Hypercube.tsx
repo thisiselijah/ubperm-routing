@@ -97,7 +97,7 @@ export default function Hypercube({ dimension, nodes, displayMethod, shuffleTrig
           <Line 
             key={`edge-${idx}`} 
             points={pts} 
-            color={isActive ? "#ef4444" : "#8e8b82"} 
+            color={isActive ? "#a9583e" : "#8e8b82"} 
             lineWidth={isActive ? 3 : 1} 
           />
         );
