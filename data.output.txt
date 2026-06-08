@@ -1,0 +1,80 @@
+# 什麼情況下，曼哈頓距離與漢明距離會「不等價」？
+
+**曼哈頓距離與漢明距離「不等價」的最核心情況，是當坐標軸上的取值範圍不再侷限於布林值 $\{0, 1\}$ 時（即非二進位網格或多值網格）。**
+
+---
+
+### 1. 非二進位網格（座標值可以為大於 1 的任意數）
+
+如果我們在一個一般的 2D 棋盤格上，坐標可以是任意整數。
+設起點 $X = (0, 0)$，終點 $Y = (2, 3)$。
+
+* **曼哈頓距離**（走捷徑所需要跨越的格子總數）：
+  $$\text{Distance}_{\text{Manhattan}} = |2 - 0| + |3 - 0| = 2 + 3 = 5$$
+* **漢明距離**（只有幾維座標相異的個數）：
+  因為第 1 軸不同（$0 \neq 2$），第 2 軸也不同（$0 \neq 3$），所以只有兩軸相異。
+  $$\text{Distance}_{\text{Hamming}} = 2$$
+
+在這個例子中，**$5 \neq 2$，兩者不等價**。
+因為在普通網格中，一個座標軸上可以移動超過 1 步（例如在 X 軸上走 2 步），此時曼哈頓距離會計算具體步數，而漢明距離只會記錄「X 軸座標有沒有不同」，因此會失真。
+
+---
+
+### 2. 連續空間（實數座標）
+
+如果坐標是任意實數，例如 $X = (1.5, 2.3)$ 與 $Y = (4.0, 2.3)$：
+* **曼哈頓距離**為 $|4.0 - 1.5| + |2.3 - 2.3| = 2.5$。
+* **漢明距離**在此情況下沒有物理意義，因為我們無法用「相異位元」來衡量連續座標之間的真實步數。
+
+---
+
+### 總結：
+
+* **等價的條件**：必須在**布林空間 $\{0, 1\}^d$**（超立方體）中。此時每個維度上的最大差值就是 1，所以「座標差的絕對值之和（曼哈頓）」就會剛好等於「不同座標的維度數量（漢明）」。
+* **不等價的條件**：一旦每個維度可以跨越**多個步伐**（如一般的 2D 網格、3D 空間、任意整數/實數坐標），兩者就會立即分道揚鑣，此時漢明距離便不再能用來代表真實的物理移動步數。
+
+*(本對話內容已成功寫入 [/home/user/ubperm-routing/data.output.txt](file:///home/user/ubperm-routing/data.output.txt))*
+
+---
+
+## Git Merge & Verification Summary (2026-06-08)
+
+1. **Conflict Resolution**:
+   - Merge conflicts in [main.cpp](file:///home/user/ubperm-routing/src/main.cpp) have been resolved. Both `solveWithAStar` (A*) and `solveWithEntropy` (Entropy Search) algorithms are successfully preserved and integrated.
+   - [plot.py](file:///home/user/ubperm-routing/scripts/plot.py) and [test.py](file:///home/user/ubperm-routing/scripts/test.py) were updated to support both new algorithms.
+
+2. **Compilation**:
+   - The updated C++ implementation compiles successfully:
+     `g++ -O3 src/main.cpp -o src/bin/routing`
+
+3. **Git Commit & Pull**:
+   - All conflicts have been staged and committed.
+   - Remote `main` changes have been pulled (`git pull origin main`). The repository is fully up-to-date.
+
+4. **Algorithm Performance Comparison (N=8)**:
+   - **A* Search**: Achieved 100% optimal path lengths matching BFS.
+     - Mean steps: 6.61, Max steps: 12.
+   - **Entropy Search**:
+     - Mean steps: 6.75, Max steps: 12.
+   - **Merge Sort (Bitonic Sort)**:
+     - Mean steps: 12.00, Max steps: 20.
+
+Plot saved to `assets/figure-20260608_153908.png`.
+
+---
+
+## Web Integration of A* Search (2026-06-08)
+
+1. **WASM Core Implementation**:
+   - Integrated `solveWithAStar` and its dependencies (e.g. `computeHeuristic`) into [wasm.cpp](file:///home/user/ubperm-routing/src/wasm.cpp).
+   - Added checking for `"astar"` algorithm option inside the `route_packets` entry point.
+   
+2. **Compilation & Packaging**:
+   - Recompiled `wasm.cpp` using local Emscripten toolchain into `router.js` and `router.wasm` in the `website/public/` folder.
+   - Built the Next.js site successfully to verify compatibility.
+
+3. **Frontend UI Update**:
+   - Added the "A* Search" button to the algorithm selector panel in [page.tsx](file:///home/user/ubperm-routing/website/src/app/page.tsx).
+   - Set the state constraints to allow selection and visualization of `astar` routing on 3-cube and 4-cube networks.
+
+

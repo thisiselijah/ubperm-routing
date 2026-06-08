@@ -28,10 +28,11 @@ def main():
 
     bfs_data = read_data('data/bfs.txt')
     merge_data = read_data('data/merge.txt')
+    astar_data = read_data('data/astar.txt')
     entropy_data = read_data('data/entropy.txt')
 
-    if not bfs_data and not merge_data and not entropy_data:
-        print("No data found in data/bfs.txt, data/merge.txt, or data/entropy.txt. Please run test.py first.")
+    if not bfs_data and not merge_data and not astar_data and not entropy_data:
+        print("No data found in data/bfs.txt, data/merge.txt, data/astar.txt, or data/entropy.txt. Please run test.py first.")
         return
 
     def print_statistics(label, data):
@@ -42,7 +43,6 @@ def main():
         min_val = np.min(data)
         max_val = np.max(data)
         std_dev = np.std(data)
-        
         counts = Counter(data)
         
         print(f"--- {label} Statistical Summary ---")
@@ -55,15 +55,18 @@ def main():
 
     print_statistics('BFS', bfs_data)
     print_statistics('Merge Sort', merge_data)
+    print_statistics('A* Search', astar_data)
     print_statistics('Entropy Search', entropy_data)
 
-    fig, axs = plt.subplots(2, 2, figsize=(16, 12))
-    ax1, ax2, ax3, ax4 = axs.flatten()
+    # Use a 2x3 grid to accommodate 4 histograms + 1 comparison curve
+    fig, axs = plt.subplots(2, 3, figsize=(20, 12))
+    ax1, ax2, ax3, ax4, ax5, ax6 = axs.flatten()
 
     # Dopamine Color Palette: Vibrant, energetic, high saturation
-    color_bfs = '#3A86FF'  # Vibrant Blue
-    color_merge = '#FF006E'  # Hot Pink
-    color_entropy = '#06D6A0' # Mint Green
+    color_bfs = '#3A86FF'      # Vibrant Blue
+    color_merge = '#FF006E'    # Hot Pink
+    color_astar = '#8338EC'    # Vibrant Purple
+    color_entropy = '#06D6A0'  # Mint Green
 
     def plot_histogram(ax, data, color, label):
         if not data:
@@ -81,7 +84,7 @@ def main():
         ax.set_ylabel("Number of Cases", fontsize=12)
         ax.grid(axis='y', linestyle='--', alpha=0.4)
 
-    def plot_curve(ax, data, color, label):
+    def plot_curve(ax, data, color, label, linewidth=3.5, linestyle='-'):
         if not data:
             return
             
@@ -94,31 +97,33 @@ def main():
             spline = make_interp_spline(x, y, k=3)
             y_smooth = spline(x_smooth)
             y_smooth = np.maximum(y_smooth, 0)
-            ax.plot(x_smooth, y_smooth, color=color, label=label, linewidth=3.5, alpha=0.9)
+            ax.plot(x_smooth, y_smooth, color=color, label=label, linewidth=linewidth, linestyle=linestyle, alpha=0.9)
         else:
-            ax.plot(x, y, color=color, label=label, linewidth=3.5, alpha=0.9)
+            ax.plot(x, y, color=color, label=label, linewidth=linewidth, linestyle=linestyle, alpha=0.9, marker='o')
 
-    # 1. Bar Chart for BFS
+    # Histograms
     plot_histogram(ax1, bfs_data, color_bfs, 'BFS')
-    
-    # 2. Bar Chart for Merge Sort
     plot_histogram(ax2, merge_data, color_merge, 'Merge Sort')
-    
-    # 3. Bar Chart for Entropy
-    plot_histogram(ax3, entropy_data, color_entropy, 'Entropy Search')
-    
-    # 4. Smoothing Approximation Curves
-    plot_curve(ax4, bfs_data, color_bfs, 'BFS')
-    plot_curve(ax4, merge_data, color_merge, 'Merge Sort')
-    plot_curve(ax4, entropy_data, color_entropy, 'Entropy Search')
-    ax4.set_title("Approximation Curves Comparison", fontsize=14, fontweight='bold', color='#333333')
-    ax4.set_xlabel("Number of Swaps (Steps)", fontsize=12)
-    ax4.set_ylabel("Number of Cases", fontsize=12)
-    ax4.grid(axis='both', linestyle='--', alpha=0.4)
-    ax4.legend(fontsize=12, loc='upper right')
+    plot_histogram(ax3, astar_data, color_astar, 'A* Search')
+    plot_histogram(ax4, entropy_data, color_entropy, 'Entropy Search')
 
-    plt.suptitle("Hypercube Permutation Routing Comparison", fontsize=18, fontweight='bold', y=1.02)
-    plt.tight_layout()
+    # Comparison Curves (ax5)
+    plot_curve(ax5, bfs_data, color_bfs, 'BFS', linewidth=5.5, linestyle='-')
+    plot_curve(ax5, merge_data, color_merge, 'Merge Sort', linewidth=3.5, linestyle='-')
+    plot_curve(ax5, astar_data, color_astar, 'A* Search', linewidth=2.5, linestyle='--')
+    plot_curve(ax5, entropy_data, color_entropy, 'Entropy Search', linewidth=3.5, linestyle=':')
+
+    ax5.set_title("Approximation Curves Comparison", fontsize=14, fontweight='bold', color='#333333')
+    ax5.set_xlabel("Number of Swaps (Steps)", fontsize=12)
+    ax5.set_ylabel("Number of Cases", fontsize=12)
+    ax5.grid(axis='both', linestyle='--', alpha=0.4)
+    ax5.legend(fontsize=12, loc='upper right')
+
+    # Hide the 6th empty axes
+    ax6.axis('off')
+
+    plt.suptitle("Hypercube Permutation Routing Comparison", fontsize=18, fontweight='bold', y=0.98)
+    plt.tight_layout(rect=[0, 0, 1, 0.95])
 
     if args.save:
         os.makedirs('assets', exist_ok=True)

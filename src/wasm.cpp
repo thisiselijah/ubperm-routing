@@ -31,6 +31,33 @@ private:
         return state;
     }
 
+    struct AStarState {
+        uint64_t state;
+        int g;
+        int f;
+        bool operator>(const AStarState& other) const {
+            return f > other.f;
+        }
+    };
+
+    int popcount(int x) const {
+        int count = 0;
+        while (x) {
+            count += (x & 1);
+            x >>= 1;
+        }
+        return count;
+    }
+
+    int computeHeuristic(uint64_t state) const {
+        int total_dist = 0;
+        for (int i = 0; i < n; ++i) {
+            int val = (state >> (i * 4)) & 15ULL;
+            total_dist += popcount(i ^ val);
+        }
+        return (total_dist + 1) / 2;
+    }
+
 public:
     HypercubeRouter(const std::vector<int>& perm) {
         n = perm.size();
@@ -97,6 +124,76 @@ public:
                 flat_swaps.push_back(p.first);
                 flat_swaps.push_back(p.second);
             }
+        }
+        return flat_swaps;
+    }
+
+    std::vector<int> solveWithAStar() {
+        std::vector<int> flat_swaps;
+        if (start_state == target_state) return flat_swaps;
+
+        std::priority_queue<AStarState, std::vector<AStarState>, std::greater<AStarState>> pq;
+        std::unordered_map<uint64_t, int> g_score;
+        std::unordered_map<uint64_t, std::pair<uint64_t, std::pair<int, int>>> parent;
+
+        int h_start = computeHeuristic(start_state);
+        pq.push({start_state, 0, h_start});
+        g_score[start_state] = 0;
+        parent[start_state] = {start_state, {-1, -1}};
+
+        bool found = false;
+
+        while (!pq.empty()) {
+            AStarState curr = pq.top();
+            pq.pop();
+
+            uint64_t curr_state = curr.state;
+
+            if (curr_state == target_state) {
+                found = true;
+                break;
+            }
+
+            if (curr.g > g_score[curr_state]) continue;
+
+            for (int i = 0; i < n; ++i) {
+                for (int b = 0; b < bit_levels; ++b) {
+                    int j = i ^ (1 << b);
+                    if (i < j) {
+                        uint64_t val_i = (curr_state >> (i * 4)) & 15ULL;
+                        uint64_t val_j = (curr_state >> (j * 4)) & 15ULL;
+
+                        uint64_t next_state = curr_state;
+                        next_state &= ~((15ULL << (i * 4)) | (15ULL << (j * 4)));
+                        next_state |= (val_i << (j * 4)) | (val_j << (i * 4));
+
+                        int tentative_g = curr.g + 1;
+                        if (g_score.find(next_state) == g_score.end() || tentative_g < g_score[next_state]) {
+                            g_score[next_state] = tentative_g;
+                            parent[next_state] = {curr_state, {i, j}};
+                            int h = computeHeuristic(next_state);
+                            pq.push({next_state, tentative_g, tentative_g + h});
+                        }
+                    }
+                }
+            }
+        }
+
+        if (found) {
+            std::vector<std::pair<int, int>> swap_order;
+            uint64_t curr = target_state;
+            while (curr != start_state) {
+                auto p = parent[curr];
+                swap_order.push_back(p.second);
+                curr = p.first;
+            }
+            std::reverse(swap_order.begin(), swap_order.end());
+            for (auto& p : swap_order) {
+                flat_swaps.push_back(p.first);
+                flat_swaps.push_back(p.second);
+            }
+        } else {
+            flat_swaps.push_back(-1);
         }
         return flat_swaps;
     }
@@ -239,6 +336,8 @@ std::vector<int> route_packets(std::string algo, std::vector<int> perm) {
         return router.solveWithBFS();
     } else if (algo == "merge") {
         return router.solveWithBitonicSort(perm);
+    } else if (algo == "astar") {
+        return router.solveWithAStar();
     } else if (algo == "entropy") {
         return router.solveWithEntropy(perm);
     }
