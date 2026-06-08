@@ -225,13 +225,125 @@ public:
         }
         return false;
     }
+
+    // Heuristic function based on Group Theory and Information Theory (Entropy)
+    double calculateEntropy(uint64_t state) const {
+        std::vector<int> perm(n);
+        for (int i = 0; i < n; ++i) {
+            perm[i] = (state >> (i * 4)) & 15ULL;
+        }
+
+        double total_distance = 0;
+        std::unordered_map<int, int> error_counts;
+        
+        for (int i = 0; i < n; ++i) {
+            // Group Theory: Difference in the Z_2^d group
+            int error = i ^ perm[i]; 
+            error_counts[error]++;
+            
+            // Group-Theoretic distance (Hamming weight of the group difference)
+            int dist = 0;
+            int temp = error;
+            while (temp > 0) {
+                dist += (temp & 1);
+                temp >>= 1;
+            }
+            total_distance += dist;
+        }
+
+        // Information Theory: Shannon entropy of the error distribution
+        double entropy = 0.0;
+        for (auto const& pair : error_counts) {
+            double p = static_cast<double>(pair.second) / n;
+            if (p > 0) {
+                entropy -= p * std::log2(p);
+            }
+        }
+
+        // The heuristic combines the group-theoretic distance with information entropy.
+        return (total_distance / 2.0) + 0.1 * entropy;
+    }
+
+    // Algorithm 3: Group-Theoretic Entropy-Driven Search
+    // Uses the group structure of the hypercube (Z_2^d) and 
+    // Shannon entropy to greedily route packets.
+    bool solveWithEntropy(std::vector<int>& current_perm, std::vector<std::pair<int, int>>& swap_order) {
+        uint64_t start = pack_state(current_perm);
+        if (start == target_state) return true;
+
+        // A* search guided by group-theoretic distance and information entropy
+        // Priority Queue stores pairs of (f-score, state)
+        std::priority_queue<std::pair<double, uint64_t>, std::vector<std::pair<double, uint64_t>>, std::greater<std::pair<double, uint64_t>>> pq;
+        std::unordered_map<uint64_t, std::pair<uint64_t, std::pair<int, int>>> parent;
+        std::unordered_map<uint64_t, int> g_score;
+
+        pq.push({calculateEntropy(start), start});
+        parent[start] = {start, {-1, -1}};
+        g_score[start] = 0;
+
+        bool found = false;
+        int expansions = 0;
+        const int MAX_EXPANSIONS = 500000; // Prevent infinite loops
+
+        while (!pq.empty() && expansions < MAX_EXPANSIONS) {
+            uint64_t curr = pq.top().second;
+            pq.pop();
+            
+            if (curr == target_state) {
+                found = true;
+                break;
+            }
+            
+            expansions++;
+
+            int curr_g = g_score[curr];
+
+            for (int i = 0; i < n; ++i) {
+                for (int b = 0; b < bit_levels; ++b) {
+                    int j = i ^ (1 << b);
+                    if (i < j) {
+                        uint64_t val_i = (curr >> (i * 4)) & 15ULL;
+                        uint64_t val_j = (curr >> (j * 4)) & 15ULL;
+
+                        uint64_t next_state = curr;
+                        next_state &= ~((15ULL << (i * 4)) | (15ULL << (j * 4)));
+                        next_state |= (val_i << (j * 4)) | (val_j << (i * 4));
+
+                        int tentative_g = curr_g + 1;
+
+                        if (g_score.find(next_state) == g_score.end() || tentative_g < g_score[next_state]) {
+                            parent[next_state] = {curr, {i, j}};
+                            g_score[next_state] = tentative_g;
+                            
+                            // f = g + w * h (weighted A* for faster convergence)
+                            double h = calculateEntropy(next_state);
+                            double f = tentative_g + 2.0 * h; 
+                            pq.push({f, next_state});
+                        }
+                    }
+                }
+            }
+        }
+
+        if (found) {
+            uint64_t curr = target_state;
+            while (curr != start) {
+                auto p = parent[curr];
+                swap_order.push_back(p.second);
+                curr = p.first;
+            }
+            std::reverse(swap_order.begin(), swap_order.end());
+            return true;
+        }
+        return false;
+    }
 };
 
 int main(int argc, char *argv[]) {
     if (argc >= 2) {
         std::string first_arg = argv[1];
         if (first_arg == "-h" || first_arg == "--help") {
-            std::cout << "Usage: " << argv[0] << " -algo <merge/bfs/astar> <-default/-test> <comma_separated_numbers>\n";
+            std::cout << "Usage: " << argv[0] << " -algo <merge/bfs/astar/entropy> <-default/-test> <comma_separated_numbers>\n";
             std::cout << "Example: " << argv[0] << " -algo merge -default 7,6,5,4,3,2,1,0\n";
             return 0;
         }
@@ -239,7 +351,7 @@ int main(int argc, char *argv[]) {
 
     // 檢查參數數量是否足夠
     if (argc < 5) {
-        std::cerr << "Usage: " << argv[0] << " -algo <merge/bfs/astar> <-default/-test> <comma_separated_numbers>\n";
+        std::cerr << "Usage: " << argv[0] << " -algo <merge/bfs/astar/entropy> <-default/-test> <comma_separated_numbers>\n";
         std::cerr << "Example: " << argv[0] << " -algo merge -default 7,6,5,4,3,2,1,0\n";
         std::cerr << "Use -h for help.\n";
         return 1;
@@ -248,7 +360,7 @@ int main(int argc, char *argv[]) {
     std::string algo_flag = argv[1];
     if (algo_flag != "-algo") {
         std::cerr << "Error: Missing -algo flag.\n";
-        std::cerr << "Usage: " << argv[0] << " -algo <merge/bfs/astar> <-default/-test> <comma_separated_numbers>\n";
+        std::cerr << "Usage: " << argv[0] << " -algo <merge/bfs/astar/entropy> <-default/-test> <comma_separated_numbers>\n";
         return 1;
     }
 
@@ -289,9 +401,12 @@ int main(int argc, char *argv[]) {
         success = router.solveWithBitonicSort(current_perm, swap_order);
     } else if (algo == "astar") {
         success = router.solveWithAStar(swap_order);
+    } else if (algo == "entropy") {
+        std::vector<int> current_perm = perm; 
+        success = router.solveWithEntropy(current_perm, swap_order);
     } else {
         if (isTestMode) std::cout << "-1\n";
-        else std::cerr << "Error: Unknown algorithm. Use bfs, merge or astar.\n";
+        else std::cerr << "Error: Unknown algorithm. Use bfs, merge, astar, or entropy.\n";
         return 1;
     }
 
@@ -307,6 +422,7 @@ int main(int argc, char *argv[]) {
                 if (algo == "bfs") algo_name = "BFS";
                 else if (algo == "merge") algo_name = "Merge Sort";
                 else if (algo == "astar") algo_name = "A* Search";
+                else if (algo == "entropy") algo_name = "Entropy Search";
                 std::cout << "Target aligned using " << algo_name << ". Swaps required: " << swap_order.size() << "\n\n";
                 std::cout << "Swap Order Vector List:\n";
                 for (size_t i = 0; i < swap_order.size(); ++i) {
