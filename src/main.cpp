@@ -226,22 +226,36 @@ public:
         return false;
     }
 
-    // Heuristic function based on Group Theory and Information Theory (Entropy)
-    double calculateEntropy(uint64_t state) const {
+    // Removed calculateCycleHeuristic
+
+    // Heuristic function combining Cycle Decomposition, Group Theory, and Information Theory
+    double calculateEntropyCycleHeuristic(uint64_t state) const {
         std::vector<int> perm(n);
         for (int i = 0; i < n; ++i) {
             perm[i] = (state >> (i * 4)) & 15ULL;
         }
 
+        int cycles = 0;
+        std::vector<bool> visited(n, false);
+        for (int i = 0; i < n; i++) {
+            if (!visited[i]) {
+                cycles++;
+                int curr = i;
+                while (!visited[curr]) {
+                    visited[curr] = true;
+                    curr = perm[curr];
+                }
+            }
+        }
+        int group_swaps = n - cycles;
+
         double total_distance = 0;
         std::unordered_map<int, int> error_counts;
-        
         for (int i = 0; i < n; ++i) {
-            // Group Theory: Difference in the Z_2^d group
             int error = i ^ perm[i]; 
-            error_counts[error]++;
-            
-            // Group-Theoretic distance (Hamming weight of the group difference)
+            if (error != 0) {
+                error_counts[error]++;
+            }
             int dist = 0;
             int temp = error;
             while (temp > 0) {
@@ -251,7 +265,6 @@ public:
             total_distance += dist;
         }
 
-        // Information Theory: Shannon entropy of the error distribution
         double entropy = 0.0;
         for (auto const& pair : error_counts) {
             double p = static_cast<double>(pair.second) / n;
@@ -260,30 +273,28 @@ public:
             }
         }
 
-        // The heuristic combines the group-theoretic distance with information entropy.
-        return (total_distance / 2.0) + 0.1 * entropy;
+        double base_heuristic = std::max((double)group_swaps, total_distance / 2.0);
+        return base_heuristic + 0.1 * entropy;
     }
 
-    // Algorithm 3: Group-Theoretic Entropy-Driven Search
-    // Uses the group structure of the hypercube (Z_2^d) and 
-    // Shannon entropy to greedily route packets.
-    bool solveWithEntropy(std::vector<int>& current_perm, std::vector<std::pair<int, int>>& swap_order) {
+    // Removed solveWithCycleDecomp
+
+    // Algorithm 4: Entropy-Cycle Search (Cycle Decomp + Entropy)
+    bool solveWithEntropyCycle(std::vector<int>& current_perm, std::vector<std::pair<int, int>>& swap_order) {
         uint64_t start = pack_state(current_perm);
         if (start == target_state) return true;
 
-        // A* search guided by group-theoretic distance and information entropy
-        // Priority Queue stores pairs of (f-score, state)
         std::priority_queue<std::pair<double, uint64_t>, std::vector<std::pair<double, uint64_t>>, std::greater<std::pair<double, uint64_t>>> pq;
         std::unordered_map<uint64_t, std::pair<uint64_t, std::pair<int, int>>> parent;
         std::unordered_map<uint64_t, int> g_score;
 
-        pq.push({calculateEntropy(start), start});
+        pq.push({calculateEntropyCycleHeuristic(start), start});
         parent[start] = {start, {-1, -1}};
         g_score[start] = 0;
 
         bool found = false;
         int expansions = 0;
-        const int MAX_EXPANSIONS = 500000; // Prevent infinite loops
+        const int MAX_EXPANSIONS = 500000;
 
         while (!pq.empty() && expansions < MAX_EXPANSIONS) {
             uint64_t curr = pq.top().second;
@@ -295,7 +306,6 @@ public:
             }
             
             expansions++;
-
             int curr_g = g_score[curr];
 
             for (int i = 0; i < n; ++i) {
@@ -315,8 +325,7 @@ public:
                             parent[next_state] = {curr, {i, j}};
                             g_score[next_state] = tentative_g;
                             
-                            // f = g + w * h (weighted A* for faster convergence)
-                            double h = calculateEntropy(next_state);
+                            double h = calculateEntropyCycleHeuristic(next_state);
                             double f = tentative_g + 2.0 * h; 
                             pq.push({f, next_state});
                         }
@@ -343,7 +352,7 @@ int main(int argc, char *argv[]) {
     if (argc >= 2) {
         std::string first_arg = argv[1];
         if (first_arg == "-h" || first_arg == "--help") {
-            std::cout << "Usage: " << argv[0] << " -algo <merge/bfs/astar/entropy> <-default/-test> <comma_separated_numbers>\n";
+            std::cout << "Usage: " << argv[0] << " -algo <merge/bfs/astar/entropy_cycle> <-default/-test> <comma_separated_numbers>\n";
             std::cout << "Example: " << argv[0] << " -algo merge -default 7,6,5,4,3,2,1,0\n";
             return 0;
         }
@@ -351,7 +360,7 @@ int main(int argc, char *argv[]) {
 
     // 檢查參數數量是否足夠
     if (argc < 5) {
-        std::cerr << "Usage: " << argv[0] << " -algo <merge/bfs/astar/entropy> <-default/-test> <comma_separated_numbers>\n";
+        std::cerr << "Usage: " << argv[0] << " -algo <merge/bfs/astar/entropy_cycle> <-default/-test> <comma_separated_numbers>\n";
         std::cerr << "Example: " << argv[0] << " -algo merge -default 7,6,5,4,3,2,1,0\n";
         std::cerr << "Use -h for help.\n";
         return 1;
@@ -360,7 +369,7 @@ int main(int argc, char *argv[]) {
     std::string algo_flag = argv[1];
     if (algo_flag != "-algo") {
         std::cerr << "Error: Missing -algo flag.\n";
-        std::cerr << "Usage: " << argv[0] << " -algo <merge/bfs/astar/entropy> <-default/-test> <comma_separated_numbers>\n";
+        std::cerr << "Usage: " << argv[0] << " -algo <merge/bfs/astar/entropy_cycle> <-default/-test> <comma_separated_numbers>\n";
         return 1;
     }
 
@@ -397,16 +406,16 @@ int main(int argc, char *argv[]) {
     if (algo == "bfs") {
         success = router.solveWithBFS(swap_order);
     } else if (algo == "merge") {
-        std::vector<int> current_perm = perm; // 複製一份陣列讓排序演算法去操作
+        std::vector<int> current_perm = perm;
         success = router.solveWithBitonicSort(current_perm, swap_order);
     } else if (algo == "astar") {
         success = router.solveWithAStar(swap_order);
-    } else if (algo == "entropy") {
+    } else if (algo == "entropy_cycle") {
         std::vector<int> current_perm = perm; 
-        success = router.solveWithEntropy(current_perm, swap_order);
+        success = router.solveWithEntropyCycle(current_perm, swap_order);
     } else {
         if (isTestMode) std::cout << "-1\n";
-        else std::cerr << "Error: Unknown algorithm. Use bfs, merge, astar, or entropy.\n";
+        else std::cerr << "Error: Unknown algorithm. Use bfs, merge, astar, or entropy_cycle.\n";
         return 1;
     }
 
@@ -422,7 +431,7 @@ int main(int argc, char *argv[]) {
                 if (algo == "bfs") algo_name = "BFS";
                 else if (algo == "merge") algo_name = "Merge Sort";
                 else if (algo == "astar") algo_name = "A* Search";
-                else if (algo == "entropy") algo_name = "Entropy Search";
+                else if (algo == "entropy_cycle") algo_name = "Entropy-Cycle Search";
                 std::cout << "Target aligned using " << algo_name << ". Swaps required: " << swap_order.size() << "\n\n";
                 std::cout << "Swap Order Vector List:\n";
                 for (size_t i = 0; i < swap_order.size(); ++i) {

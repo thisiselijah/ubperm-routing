@@ -220,19 +220,35 @@ public:
         return flat_swaps;
     }
 
-    double calculateEntropy(uint64_t state) const {
+    // Removed calculateCycleHeuristic
+
+    double calculateEntropyCycleHeuristic(uint64_t state) const {
         std::vector<int> perm(n);
         for (int i = 0; i < n; ++i) {
             perm[i] = (state >> (i * 4)) & 15ULL;
         }
 
+        int cycles = 0;
+        std::vector<bool> visited(n, false);
+        for (int i = 0; i < n; i++) {
+            if (!visited[i]) {
+                cycles++;
+                int curr = i;
+                while (!visited[curr]) {
+                    visited[curr] = true;
+                    curr = perm[curr];
+                }
+            }
+        }
+        int group_swaps = n - cycles;
+
         double total_distance = 0;
         std::unordered_map<int, int> error_counts;
-        
         for (int i = 0; i < n; ++i) {
             int error = i ^ perm[i]; 
-            error_counts[error]++;
-            
+            if (error != 0) {
+                error_counts[error]++;
+            }
             int dist = 0;
             int temp = error;
             while (temp > 0) {
@@ -250,10 +266,13 @@ public:
             }
         }
 
-        return (total_distance / 2.0) + 0.1 * entropy;
+        double base_heuristic = std::max((double)group_swaps, total_distance / 2.0);
+        return base_heuristic + 0.1 * entropy;
     }
 
-    std::vector<int> solveWithEntropy(std::vector<int> current_perm) {
+    // Removed solveWithCycleDecomp
+
+    std::vector<int> solveWithEntropyCycle(std::vector<int> current_perm) {
         std::vector<int> flat_swaps;
         uint64_t start = pack_state(current_perm);
         if (start == target_state) return flat_swaps;
@@ -262,7 +281,7 @@ public:
         std::unordered_map<uint64_t, std::pair<uint64_t, std::pair<int, int>>> parent;
         std::unordered_map<uint64_t, int> g_score;
 
-        pq.push({calculateEntropy(start), start});
+        pq.push({calculateEntropyCycleHeuristic(start), start});
         parent[start] = {start, {-1, -1}};
         g_score[start] = 0;
 
@@ -299,7 +318,7 @@ public:
                             parent[next_state] = {curr, {i, j}};
                             g_score[next_state] = tentative_g;
                             
-                            double h = calculateEntropy(next_state);
+                            double h = calculateEntropyCycleHeuristic(next_state);
                             double f = tentative_g + 2.0 * h; 
                             pq.push({f, next_state});
                         }
@@ -338,8 +357,8 @@ std::vector<int> route_packets(std::string algo, std::vector<int> perm) {
         return router.solveWithBitonicSort(perm);
     } else if (algo == "astar") {
         return router.solveWithAStar();
-    } else if (algo == "entropy") {
-        return router.solveWithEntropy(perm);
+    } else if (algo == "entropy_cycle") {
+        return router.solveWithEntropyCycle(perm);
     }
     return {-1};
 }

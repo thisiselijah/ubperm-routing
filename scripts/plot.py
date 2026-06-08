@@ -29,34 +29,42 @@ def main():
     bfs_data = read_data('data/bfs.txt')
     merge_data = read_data('data/merge.txt')
     astar_data = read_data('data/astar.txt')
-    entropy_data = read_data('data/entropy.txt')
+    entropy_cycle_data = read_data('data/entropy_cycle.txt')
 
-    if not bfs_data and not merge_data and not astar_data and not entropy_data:
-        print("No data found in data/bfs.txt, data/merge.txt, data/astar.txt, or data/entropy.txt. Please run test.py first.")
-        return
+    time_slot = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    os.makedirs('data', exist_ok=True)
+    summary_path = f'data/summary-{time_slot}.txt'
 
-    def print_statistics(label, data):
-        if not data:
+    with open(summary_path, 'w') as f_out:
+        if not bfs_data and not merge_data and not astar_data and not entropy_cycle_data:
+            f_out.write("No data found in data/bfs.txt, data/merge.txt, data/astar.txt, or data/entropy_cycle.txt. Please run test.py first.\n")
+            print(f"No data found. Log written to {summary_path}")
             return
-        mean = np.mean(data)
-        median = np.median(data)
-        min_val = np.min(data)
-        max_val = np.max(data)
-        std_dev = np.std(data)
-        counts = Counter(data)
-        
-        print(f"--- {label} Statistical Summary ---")
-        print(f"Total Cases: {len(data)}")
-        print(f"Mean: {mean:.2f}, Median: {median:.2f}, Min: {min_val}, Max: {max_val}, Std Dev: {std_dev:.2f}")
-        print(f"Step Distribution:")
-        for step in sorted(counts.keys()):
-            print(f"  {step} steps: {counts[step]} cases")
-        print()
 
-    print_statistics('BFS', bfs_data)
-    print_statistics('Merge Sort', merge_data)
-    print_statistics('A* Search', astar_data)
-    print_statistics('Entropy Search', entropy_data)
+        def write_statistics(label, data):
+            if not data:
+                return
+            mean = np.mean(data)
+            median = np.median(data)
+            min_val = np.min(data)
+            max_val = np.max(data)
+            std_dev = np.std(data)
+            counts = Counter(data)
+            
+            f_out.write(f"--- {label} Statistical Summary ---\n")
+            f_out.write(f"Total Cases: {len(data)}\n")
+            f_out.write(f"Mean: {mean:.2f}, Median: {median:.2f}, Min: {min_val}, Max: {max_val}, Std Dev: {std_dev:.2f}\n")
+            f_out.write(f"Step Distribution:\n")
+            for step in sorted(counts.keys()):
+                f_out.write(f"  {step} steps: {counts[step]} cases\n")
+            f_out.write("\n")
+
+        write_statistics('BFS', bfs_data)
+        write_statistics('Merge Sort', merge_data)
+        write_statistics('A* Search', astar_data)
+        write_statistics('Entropy-Cycle Search', entropy_cycle_data)
+
+    print(f"Statistical summary successfully written to {summary_path}")
 
     # Use a 2x3 grid to accommodate 4 histograms + 1 comparison curve
     fig, axs = plt.subplots(2, 3, figsize=(20, 12))
@@ -65,8 +73,8 @@ def main():
     # Dopamine Color Palette: Vibrant, energetic, high saturation
     color_bfs = '#3A86FF'      # Vibrant Blue
     color_merge = '#FF006E'    # Hot Pink
-    color_astar = '#8338EC'    # Vibrant Purple
-    color_entropy = '#06D6A0'  # Mint Green
+    color_astar = '#FFD166'    # Bright Yellow
+    color_entropy_cycle = '#118AB2' # Vibrant Teal
 
     def plot_histogram(ax, data, color, label):
         if not data:
@@ -105,13 +113,13 @@ def main():
     plot_histogram(ax1, bfs_data, color_bfs, 'BFS')
     plot_histogram(ax2, merge_data, color_merge, 'Merge Sort')
     plot_histogram(ax3, astar_data, color_astar, 'A* Search')
-    plot_histogram(ax4, entropy_data, color_entropy, 'Entropy Search')
+    plot_histogram(ax4, entropy_cycle_data, color_entropy_cycle, 'Entropy-Cycle Search')
 
     # Comparison Curves (ax5)
     plot_curve(ax5, bfs_data, color_bfs, 'BFS', linewidth=5.5, linestyle='-')
     plot_curve(ax5, merge_data, color_merge, 'Merge Sort', linewidth=3.5, linestyle='-')
-    plot_curve(ax5, astar_data, color_astar, 'A* Search', linewidth=2.5, linestyle='--')
-    plot_curve(ax5, entropy_data, color_entropy, 'Entropy Search', linewidth=3.5, linestyle=':')
+    plot_curve(ax5, astar_data, color_astar, 'A* Search', linewidth=3, linestyle='-.')
+    plot_curve(ax5, entropy_cycle_data, color_entropy_cycle, 'Entropy-Cycle Search', linewidth=3, linestyle='--')
 
     ax5.set_title("Approximation Curves Comparison", fontsize=14, fontweight='bold', color='#333333')
     ax5.set_xlabel("Number of Swaps (Steps)", fontsize=12)
@@ -119,7 +127,6 @@ def main():
     ax5.grid(axis='both', linestyle='--', alpha=0.4)
     ax5.legend(fontsize=12, loc='upper right')
 
-    # Hide the 6th empty axes
     ax6.axis('off')
 
     plt.suptitle("Hypercube Permutation Routing Comparison", fontsize=18, fontweight='bold', y=0.98)
@@ -127,7 +134,6 @@ def main():
 
     if args.save:
         os.makedirs('assets', exist_ok=True)
-        time_slot = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         save_path = f'assets/figure-{time_slot}.png'
         plt.savefig(save_path, dpi=300)
         print(f"Plot saved successfully to {save_path}")
