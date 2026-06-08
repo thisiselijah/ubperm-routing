@@ -34,3 +34,30 @@
 * **不等價的條件**：一旦每個維度可以跨越**多個步伐**（如一般的 2D 網格、3D 空間、任意整數/實數坐標），兩者就會立即分道揚鑣，此時漢明距離便不再能用來代表真實的物理移動步數。
 
 *(本對話內容已成功寫入 [/home/user/ubperm-routing/data.output.txt](file:///home/user/ubperm-routing/data.output.txt))*
+
+---
+
+## Git Merge & Verification Summary (2026-06-08)
+
+1. **Conflict Resolution**:
+   - Merge conflicts in [main.cpp](file:///home/user/ubperm-routing/src/main.cpp) have been resolved. Both `solveWithAStar` (A*) and `solveWithEntropy` (Entropy Search) algorithms are successfully preserved and integrated.
+   - [plot.py](file:///home/user/ubperm-routing/scripts/plot.py) and [test.py](file:///home/user/ubperm-routing/scripts/test.py) were updated to support both new algorithms.
+
+2. **Compilation**:
+   - The updated C++ implementation compiles successfully:
+     `g++ -O3 src/main.cpp -o src/bin/routing`
+
+3. **Git Commit & Pull**:
+   - All conflicts have been staged and committed.
+   - Remote `main` changes have been pulled (`git pull origin main`). The repository is fully up-to-date.
+
+4. **Algorithm Performance Comparison (N=8)**:
+   - **A* Search**: Achieved 100% optimal path lengths matching BFS.
+     - Mean steps: 6.61, Max steps: 12.
+   - **Entropy Search**:
+     - Mean steps: 6.75, Max steps: 12.
+   - **Merge Sort (Bitonic Sort)**:
+     - Mean steps: 12.00, Max steps: 20.
+
+Plot saved to `assets/figure-20260608_153908.png`.
+
