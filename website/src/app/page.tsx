@@ -13,7 +13,7 @@ interface AppState {
 export default function Home() {
   const [displayMethod, setDisplayMethod] = useState<'text' | 'color'>('text');
   const [shuffleTrigger, setShuffleTrigger] = useState(0);
-  const [algo, setAlgo] = useState<'merge' | 'bfs' | 'entropy'>('merge');
+  const [algo, setAlgo] = useState<'merge' | 'bfs' | 'astar' | 'entropy'>('merge');
   const [isRouting, setIsRouting] = useState(false);
   const [activeSwap, setActiveSwap] = useState<{ node1: number, node2: number } | null>(null);
   const [swapList, setSwapList] = useState<{ node1: number, node2: number }[]>([]);
@@ -215,6 +215,11 @@ export default function Home() {
                   disabled={isRouting}
                   className={`px-4 py-1.5 text-[12px] font-heading font-bold uppercase border border-black ${algo === 'bfs' ? 'bg-black text-white' : 'bg-white text-black'} disabled:opacity-50`}
                 >BFS</button>
+                <button 
+                  onClick={() => setAlgo('astar')}
+                  disabled={isRouting}
+                  className={`px-4 py-1.5 text-[12px] font-heading font-bold uppercase border border-black ${algo === 'astar' ? 'bg-black text-white' : 'bg-white text-black'} disabled:opacity-50`}
+                >A* Search</button>
                 <button 
                   onClick={() => setAlgo('entropy')}
                   disabled={isRouting}
