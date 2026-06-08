@@ -22,6 +22,7 @@ private:
     int bit_levels;
     std::string start_state;
     std::string target_state;
+    std::vector<double> precomputed_entropy;
 
     std::string pack_state(const std::vector<int>& perm) const {
         std::string state;
@@ -83,6 +84,11 @@ public:
         if (n > 0) {
             start_state = pack_state(perm);
             target_state = get_target_state(n);
+            precomputed_entropy.resize(n + 1, 0.0);
+            for (int count = 1; count <= n; ++count) {
+                double p = static_cast<double>(count) / n;
+                precomputed_entropy[count] = -p * std::log2(p);
+            }
         }
     }
 
@@ -225,9 +231,9 @@ public:
     // Removed calculateCycleHeuristic
 
     // Heuristic function combining Cycle Decomposition, Group Theory, and Information Theory
-    double calculateEntropyCycleHeuristic(const std::string& state) const {
+    double calculateEntropyCycleHeuristic(const std::string& state, int curr_g = 0) const {
         int cycles = 0;
-        std::vector<bool> visited(n, false);
+        bool visited[256] = {false};
         for (int i = 0; i < n; i++) {
             if (!visited[i]) {
                 cycles++;
@@ -241,7 +247,7 @@ public:
         int group_swaps = n - cycles;
 
         double total_distance = 0;
-        std::unordered_map<int, int> error_counts;
+        int error_counts[256] = {0};
         for (int i = 0; i < n; ++i) {
             int error = i ^ static_cast<int>(static_cast<unsigned char>(state[i])); 
             if (error != 0) {
@@ -252,15 +258,19 @@ public:
         }
 
         double entropy = 0.0;
-        for (auto const& pair : error_counts) {
-            double p = static_cast<double>(pair.second) / n;
-            if (p > 0) {
-                entropy -= p * std::log2(p);
+        for (int i = 1; i < 256; ++i) {
+            if (error_counts[i] > 0) {
+                entropy += precomputed_entropy[error_counts[i]];
             }
         }
 
         double base_heuristic = std::max((double)group_swaps, total_distance / 2.0);
-        return base_heuristic + 0.1 * entropy;
+        
+        // Adaptive Entropy Penalty: weight increases slightly as we get deeper
+        double entropy_weight = 0.1 + 0.01 * curr_g;
+        if (entropy_weight > 2.0) entropy_weight = 2.0;
+
+        return base_heuristic + entropy_weight * entropy;
     }
 
     // Removed solveWithCycleDecomp
@@ -274,7 +284,7 @@ public:
         std::unordered_map<std::string, std::pair<std::string, std::pair<int, int>>> parent;
         std::unordered_map<std::string, int> g_score;
 
-        pq.push({calculateEntropyCycleHeuristic(start), start});
+        pq.push({calculateEntropyCycleHeuristic(start, 0), start});
         parent[start] = {start, {-1, -1}};
         g_score[start] = 0;
 
@@ -307,7 +317,7 @@ public:
                             parent[next_state] = {curr, {i, j}};
                             g_score[next_state] = tentative_g;
                             
-                            double h = calculateEntropyCycleHeuristic(next_state);
+                            double h = calculateEntropyCycleHeuristic(next_state, tentative_g);
                             double f = tentative_g + 2.0 * h; 
                             pq.push({f, next_state});
                         }
