@@ -18,6 +18,22 @@ The project explores multiple algorithms for finding routing paths on the hyperc
    * **Time Complexity:** $O(b^D)$ worst-case, but practically expands exponentially fewer nodes than BFS due to the heuristic guidance.
 4. **Entropy-Cycle Search:** A highly optimized engine that combines both group theory (Cycle Decomposition) and Information Theory (Shannon Entropy). It strictly scores states using cycle length bounds while using displacement entropy as a tie-breaking penalty to resolve packets methodically.
    * **Time Complexity:** $O(b^D)$ theoretically, but the heavily informed heuristic prunes the search tree so aggressively that it achieves near-polynomial empirical runtimes on small/medium hypercubes. Each heuristic evaluation takes $O(N)$ time.
+### How the A* Search Works
+
+The **A\* Search** algorithm is an informed search strategy that significantly improves upon Breadth-First Search (BFS) by using a *heuristic* to guide its exploration of the hypercube.
+
+#### 1. The Cost Function $f(n) = g(n) + h(n)$
+Instead of blindly expanding in all directions like BFS, A* maintains a priority queue of states ranked by $f(n)$.
+- $g(n)$ is the **actual cost** (the number of physical hypercube edge-swaps taken so far to reach the current state).
+- $h(n)$ is the **heuristic estimate** (the guessed number of swaps still needed to reach the sorted target state).
+
+By continually exploring the state with the lowest $f(n)$, the algorithm guarantees finding the absolute shortest path while avoiding useless detours.
+
+#### 2. The Heuristic: Hamming Distance
+In our hypercube implementation, the heuristic $h(n)$ is built around the **Hamming Distance**. 
+For every packet in the network, we look at its current node address and its target node address. We use a bitwise XOR and count the set bits (`popcount(current ^ target)`) to determine exactly how many hypercube dimensions the packet still needs to traverse. 
+
+Because every physical swap along a hypercube edge moves *two* packets simultaneously (potentially correcting one dimension for each packet), we sum the Hamming distance across all packets and divide by 2. This creates an "admissible" heuristic (it never overestimates the true cost), allowing A* to safely and optimally prune millions of unpromising branches that BFS would otherwise compute.
 
 ### How the Entropy-Cycle Search Works
 
