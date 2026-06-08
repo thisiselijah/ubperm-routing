@@ -1,18 +1,12 @@
-// 輸入：(1) a, b, c, d, e, f, g, h
-//      (2) a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p 
-// 輸出：一個包含所有交換順序的 vector
-// compile: g++ -O3 src/main.cpp -o src/bin/routing
-
-
-#include <iostream>
+#include <emscripten/bind.h>
 #include <vector>
-#include <string>
-#include <sstream>
 #include <queue>
-#include <cstdint>
 #include <unordered_map>
-#include <algorithm>
 #include <cmath>
+#include <algorithm>
+#include <cstdint>
+
+using namespace emscripten;
 
 class HypercubeRouter {
 private:
@@ -49,8 +43,9 @@ public:
         return (n == 8 || n == 16);
     }
 
-    bool solveWithBFS(std::vector<std::pair<int, int>>& swap_order) {
-        if (start_state == target_state) return true;
+    std::vector<int> solveWithBFS() {
+        std::vector<int> flat_swaps;
+        if (start_state == target_state) return flat_swaps;
 
         std::queue<uint64_t> q;
         std::unordered_map<uint64_t, std::pair<uint64_t, std::pair<int, int>>> parent;
@@ -90,6 +85,7 @@ public:
         }
 
         if (found) {
+            std::vector<std::pair<int, int>> swap_order;
             uint64_t curr = target_state;
             while (curr != start_state) {
                 auto p = parent[curr];
@@ -97,36 +93,36 @@ public:
                 curr = p.first;
             }
             std::reverse(swap_order.begin(), swap_order.end());
-            return true;
+            for (auto& p : swap_order) {
+                flat_swaps.push_back(p.first);
+                flat_swaps.push_back(p.second);
+            }
         }
-        return false;
+        return flat_swaps;
     }
 
-    bool solveWithBitonicSort(std::vector<int>& current_perm, std::vector<std::pair<int, int>>& swap_order) {
+    std::vector<int> solveWithBitonicSort(std::vector<int> current_perm) {
+        std::vector<int> flat_swaps;
         int num_nodes = current_perm.size(); 
 
         for (int k = 2; k <= num_nodes; k *= 2) {
             for (int j = k / 2; j > 0; j /= 2) {
                 for (int i = 0; i < num_nodes; i++) {
-                    int neighbor = i ^ j; // 透過 XOR 找到這個維度上的相鄰節點
+                    int neighbor = i ^ j; 
                     if (i < neighbor) {
                         bool ascending_order = ((i & k) == 0);
                         if ((current_perm[i] > current_perm[neighbor]) == ascending_order) {
                             std::swap(current_perm[i], current_perm[neighbor]);
-                            swap_order.push_back({i, neighbor});
+                            flat_swaps.push_back(i);
+                            flat_swaps.push_back(neighbor);
                         }
                     }
                 }
             }
         }
-
-        for (int i = 0; i < num_nodes; ++i) {
-            if (current_perm[i] != i) return false;
-        }
-        return true;
+        return flat_swaps;
     }
 
-    // Heuristic function based on Group Theory and Information Theory (Entropy)
     double calculateEntropy(uint64_t state) const {
         std::vector<int> perm(n);
         for (int i = 0; i < n; ++i) {
@@ -137,11 +133,9 @@ public:
         std::unordered_map<int, int> error_counts;
         
         for (int i = 0; i < n; ++i) {
-            // Group Theory: Difference in the Z_2^d group
             int error = i ^ perm[i]; 
             error_counts[error]++;
             
-            // Group-Theoretic distance (Hamming weight of the group difference)
             int dist = 0;
             int temp = error;
             while (temp > 0) {
@@ -151,7 +145,6 @@ public:
             total_distance += dist;
         }
 
-        // Information Theory: Shannon entropy of the error distribution
         double entropy = 0.0;
         for (auto const& pair : error_counts) {
             double p = static_cast<double>(pair.second) / n;
@@ -160,19 +153,14 @@ public:
             }
         }
 
-        // The heuristic combines the group-theoretic distance with information entropy.
         return (total_distance / 2.0) + 0.1 * entropy;
     }
 
-    // Algorithm 3: Group-Theoretic Entropy-Driven Search
-    // Uses the group structure of the hypercube (Z_2^d) and 
-    // Shannon entropy to greedily route packets.
-    bool solveWithEntropy(std::vector<int>& current_perm, std::vector<std::pair<int, int>>& swap_order) {
+    std::vector<int> solveWithEntropy(std::vector<int> current_perm) {
+        std::vector<int> flat_swaps;
         uint64_t start = pack_state(current_perm);
-        if (start == target_state) return true;
+        if (start == target_state) return flat_swaps;
 
-        // A* search guided by group-theoretic distance and information entropy
-        // Priority Queue stores pairs of (f-score, state)
         std::priority_queue<std::pair<double, uint64_t>, std::vector<std::pair<double, uint64_t>>, std::greater<std::pair<double, uint64_t>>> pq;
         std::unordered_map<uint64_t, std::pair<uint64_t, std::pair<int, int>>> parent;
         std::unordered_map<uint64_t, int> g_score;
@@ -183,7 +171,7 @@ public:
 
         bool found = false;
         int expansions = 0;
-        const int MAX_EXPANSIONS = 500000; // Prevent infinite loops
+        const int MAX_EXPANSIONS = 500000;
 
         while (!pq.empty() && expansions < MAX_EXPANSIONS) {
             uint64_t curr = pq.top().second;
@@ -195,7 +183,6 @@ public:
             }
             
             expansions++;
-
             int curr_g = g_score[curr];
 
             for (int i = 0; i < n; ++i) {
@@ -215,7 +202,6 @@ public:
                             parent[next_state] = {curr, {i, j}};
                             g_score[next_state] = tentative_g;
                             
-                            // f = g + w * h (weighted A* for faster convergence)
                             double h = calculateEntropy(next_state);
                             double f = tentative_g + 2.0 * h; 
                             pq.push({f, next_state});
@@ -226,6 +212,7 @@ public:
         }
 
         if (found) {
+            std::vector<std::pair<int, int>> swap_order;
             uint64_t curr = target_state;
             while (curr != start) {
                 auto p = parent[curr];
@@ -233,105 +220,32 @@ public:
                 curr = p.first;
             }
             std::reverse(swap_order.begin(), swap_order.end());
-            return true;
+            for (auto& p : swap_order) {
+                flat_swaps.push_back(p.first);
+                flat_swaps.push_back(p.second);
+            }
+        } else {
+            flat_swaps.push_back(-1); // Indicator of failure
         }
-        return false;
+        return flat_swaps;
     }
 };
 
-int main(int argc, char *argv[]) {
-    if (argc >= 2) {
-        std::string first_arg = argv[1];
-        if (first_arg == "-h" || first_arg == "--help") {
-            std::cout << "Usage: " << argv[0] << " -algo <merge/bfs/entropy> <-default/-test> <comma_separated_numbers>\n";
-            std::cout << "Example: " << argv[0] << " -algo merge -default 7,6,5,4,3,2,1,0\n";
-            return 0;
-        }
-    }
-
-    // 檢查參數數量是否足夠
-    if (argc < 5) {
-        std::cerr << "Usage: " << argv[0] << " -algo <merge/bfs/entropy> <-default/-test> <comma_separated_numbers>\n";
-        std::cerr << "Example: " << argv[0] << " -algo merge -default 7,6,5,4,3,2,1,0\n";
-        std::cerr << "Use -h for help.\n";
-        return 1;
-    }
-
-    std::string algo_flag = argv[1];
-    if (algo_flag != "-algo") {
-        std::cerr << "Error: Missing -algo flag.\n";
-        std::cerr << "Usage: " << argv[0] << " -algo <merge/bfs/entropy> <-default/-test> <comma_separated_numbers>\n";
-        return 1;
-    }
-
-    std::string algo = argv[2];
-    std::string mode = argv[3];
-    std::string input = argv[4];
-    bool isTestMode = (mode == "-test");
-
-    if (mode != "-default" && mode != "-test") {
-        if (isTestMode) std::cout << "-1\n";
-        else std::cerr << "Error: Invalid mode. Use -default or -test.\n";
-        return 1;
-    }
-
-    std::stringstream ss(input);
-    std::string token;
-    std::vector<int> perm;
-
-    while (std::getline(ss, token, ',')) {
-        perm.push_back(std::stoi(token));
-    }
-
+std::vector<int> route_packets(std::string algo, std::vector<int> perm) {
     HypercubeRouter router(perm);
-    if (!router.isValidSize()) {
-        if (isTestMode) std::cout << "-1\n";
-        else std::cerr << "Error: The input must contain exactly 8 or 16 numbers.\n";
-        return 1;
-    }
-
-    std::vector<std::pair<int, int>> swap_order;
-    bool success = false; // 新增：用來記錄演算法是否成功找到路徑
-
-    // 根據指令決定呼叫哪一種演算法 ▼▼▼
+    if (!router.isValidSize()) return {-1};
+    
     if (algo == "bfs") {
-        success = router.solveWithBFS(swap_order);
+        return router.solveWithBFS();
     } else if (algo == "merge") {
-        std::vector<int> current_perm = perm; // 複製一份陣列讓排序演算法去操作
-        success = router.solveWithBitonicSort(current_perm, swap_order);
+        return router.solveWithBitonicSort(perm);
     } else if (algo == "entropy") {
-        std::vector<int> current_perm = perm; 
-        success = router.solveWithEntropy(current_perm, swap_order);
-    } else {
-        if (isTestMode) std::cout << "-1\n";
-        else std::cerr << "Error: Unknown algorithm. Use bfs, merge, or entropy.\n";
-        return 1;
+        return router.solveWithEntropy(perm);
     }
+    return {-1};
+}
 
-    if (success) { 
-        // 根據模式決定輸出格式
-        if (isTestMode) {
-            std::cout << swap_order.size() << "\n";
-        } else {
-            if (swap_order.empty()) {
-                std::cout << "The array is already sorted. Swaps required: 0\n";
-            } else {
-                std::string algo_name = (algo == "bfs") ? "BFS" : (algo == "merge") ? "Merge Sort" : "Entropy Search";
-                std::cout << "Target aligned using " << algo_name << ". Swaps required: " << swap_order.size() << "\n\n";
-                std::cout << "Swap Order Vector List:\n";
-                for (size_t i = 0; i < swap_order.size(); ++i) {
-                    std::cout << "Step " << (i + 1) << ": Swap index " 
-                              << swap_order[i].first << " and " << swap_order[i].second << "\n";
-                }
-            }
-        }
-        return 0;
-    } else {
-        if (isTestMode) {
-            std::cout << "-1\n";
-        } else {
-            std::cout << "No valid bit-level routing path found.\n";
-        }
-        return 1;
-    }
+EMSCRIPTEN_BINDINGS(my_module) {
+    register_vector<int>("VectorInt");
+    function("route_packets", &route_packets);
 }
