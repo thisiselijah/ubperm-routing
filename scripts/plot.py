@@ -13,6 +13,7 @@ import os
 import argparse
 import numpy as np
 from scipy.interpolate import make_interp_spline
+import datetime
 
 def read_data(filename):
     if not os.path.exists(filename):
@@ -27,16 +28,42 @@ def main():
 
     bfs_data = read_data('data/bfs.txt')
     merge_data = read_data('data/merge.txt')
+    entropy_data = read_data('data/entropy.txt')
 
-    if not bfs_data and not merge_data:
-        print("No data found in data/bfs.txt or data/merge.txt. Please run test.py first.")
+    if not bfs_data and not merge_data and not entropy_data:
+        print("No data found in data/bfs.txt, data/merge.txt, or data/entropy.txt. Please run test.py first.")
         return
 
-    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(22, 6))
+    def print_statistics(label, data):
+        if not data:
+            return
+        mean = np.mean(data)
+        median = np.median(data)
+        min_val = np.min(data)
+        max_val = np.max(data)
+        std_dev = np.std(data)
+        
+        counts = Counter(data)
+        
+        print(f"--- {label} Statistical Summary ---")
+        print(f"Total Cases: {len(data)}")
+        print(f"Mean: {mean:.2f}, Median: {median:.2f}, Min: {min_val}, Max: {max_val}, Std Dev: {std_dev:.2f}")
+        print(f"Step Distribution:")
+        for step in sorted(counts.keys()):
+            print(f"  {step} steps: {counts[step]} cases")
+        print()
+
+    print_statistics('BFS', bfs_data)
+    print_statistics('Merge Sort', merge_data)
+    print_statistics('Entropy Search', entropy_data)
+
+    fig, axs = plt.subplots(2, 2, figsize=(16, 12))
+    ax1, ax2, ax3, ax4 = axs.flatten()
 
     # Dopamine Color Palette: Vibrant, energetic, high saturation
     color_bfs = '#3A86FF'  # Vibrant Blue
     color_merge = '#FF006E'  # Hot Pink
+    color_entropy = '#06D6A0' # Mint Green
 
     def plot_histogram(ax, data, color, label):
         if not data:
@@ -77,21 +104,26 @@ def main():
     # 2. Bar Chart for Merge Sort
     plot_histogram(ax2, merge_data, color_merge, 'Merge Sort')
     
-    # 3. Smoothing Approximation Curves
-    plot_curve(ax3, bfs_data, color_bfs, 'BFS')
-    plot_curve(ax3, merge_data, color_merge, 'Merge Sort')
-    ax3.set_title("Approximation Curves Comparison", fontsize=14, fontweight='bold', color='#333333')
-    ax3.set_xlabel("Number of Swaps (Steps)", fontsize=12)
-    ax3.set_ylabel("Number of Cases", fontsize=12)
-    ax3.grid(axis='both', linestyle='--', alpha=0.4)
-    ax3.legend(fontsize=12, loc='upper right')
+    # 3. Bar Chart for Entropy
+    plot_histogram(ax3, entropy_data, color_entropy, 'Entropy Search')
+    
+    # 4. Smoothing Approximation Curves
+    plot_curve(ax4, bfs_data, color_bfs, 'BFS')
+    plot_curve(ax4, merge_data, color_merge, 'Merge Sort')
+    plot_curve(ax4, entropy_data, color_entropy, 'Entropy Search')
+    ax4.set_title("Approximation Curves Comparison", fontsize=14, fontweight='bold', color='#333333')
+    ax4.set_xlabel("Number of Swaps (Steps)", fontsize=12)
+    ax4.set_ylabel("Number of Cases", fontsize=12)
+    ax4.grid(axis='both', linestyle='--', alpha=0.4)
+    ax4.legend(fontsize=12, loc='upper right')
 
-    plt.suptitle("Hypercube Permutation Routing Comparison", fontsize=18, fontweight='bold', y=1.05)
+    plt.suptitle("Hypercube Permutation Routing Comparison", fontsize=18, fontweight='bold', y=1.02)
     plt.tight_layout()
 
     if args.save:
-        os.makedirs('data', exist_ok=True)
-        save_path = 'data/distribution_curve.png'
+        os.makedirs('assets', exist_ok=True)
+        time_slot = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        save_path = f'assets/figure-{time_slot}.png'
         plt.savefig(save_path, dpi=300)
         print(f"Plot saved successfully to {save_path}")
     else:

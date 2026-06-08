@@ -13,17 +13,35 @@ interface AppState {
 export default function Home() {
   const [displayMethod, setDisplayMethod] = useState<'text' | 'color'>('text');
   const [shuffleTrigger, setShuffleTrigger] = useState(0);
-  const [algo, setAlgo] = useState<'merge' | 'bfs'>('merge');
+  const [algo, setAlgo] = useState<'merge' | 'bfs' | 'entropy'>('merge');
   const [isRouting, setIsRouting] = useState(false);
   const [activeSwap, setActiveSwap] = useState<{ node1: number, node2: number } | null>(null);
   const [swapList, setSwapList] = useState<{ node1: number, node2: number }[]>([]);
   const [currentStep, setCurrentStep] = useState<number>(-1);
+  const [wasmModule, setWasmModule] = useState<any>(null);
   const [state, setState] = useState<AppState>({
     dimension: 3,
     nodes: Array.from({ length: 8 }, (_, i) => ({ id: i, packet: i }))
   });
 
   const stepListRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const script = document.createElement('script');
+    const basePath = process.env.NODE_ENV === 'production' ? '/ubperm-routing' : '';
+    script.src = `${basePath}/router.js`;
+    script.async = true;
+    script.onload = () => {
+      if ((window as any).createRouterModule) {
+        (window as any).createRouterModule().then((instance: any) => {
+          setWasmModule(instance);
+        });
+      }
+    };
+    document.body.appendChild(script);
+    return () => { document.body.removeChild(script); };
+  }, []);
+
 
   useEffect(() => {
     if (stepListRef.current && currentStep >= 0) {
@@ -34,25 +52,7 @@ export default function Home() {
     }
   }, [currentStep]);
 
-  const fetchData = async () => {
-    try {
-      const res = await fetch("/api/state");
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-      const data = await res.json();
-      setState(data);
-    } catch (e) {
-      console.error("Failed to fetch state", e);
-    }
-  };
 
-  useEffect(() => {
-    // Polling API every 1000ms
-    if (isRouting) return; // Pause polling during routing animation
-    const interval = setInterval(fetchData, 1000);
-    return () => clearInterval(interval);
-  }, [isRouting]);
 
   const handleShuffle = async () => {
     if (isRouting) return;
@@ -76,49 +76,50 @@ export default function Home() {
     
     setState(newState);
     setShuffleTrigger(s => s + 1);
-    try {
-        await fetch("/api/state", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(newState)
-        });
-    } catch (e) {
-        console.error("Error posting state", e);
-    }
   };
 
   const handleRoute = async () => {
-    if (isRouting) return;
+    if (isRouting || !wasmModule) {
+      if (!wasmModule) alert("WASM Module not loaded yet!");
+      return;
+    }
     setIsRouting(true);
     try {
-      const res = await fetch("/api/execute", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ algo, nodes: state.nodes })
-      });
-      const data = await res.json();
+      const vecIn = new wasmModule.VectorInt();
+      for (const n of state.nodes) {
+        vecIn.push_back(n.packet);
+      }
       
-      if (data.success && data.swaps) {
+      const flatSwaps = wasmModule.route_packets(algo, vecIn);
+      const swaps = [];
+      
+      if (flatSwaps.size() > 0 && flatSwaps.get(0) === -1) {
+          alert("Routing failed: No valid bit-level routing path found.");
+          vecIn.delete();
+          flatSwaps.delete();
+          setIsRouting(false);
+          return;
+      }
+
+      for (let i = 0; i < flatSwaps.size(); i += 2) {
+        swaps.push({ node1: flatSwaps.get(i), node2: flatSwaps.get(i+1) });
+      }
+
+      vecIn.delete();
+      flatSwaps.delete();
+
+      if (swaps.length >= 0) {
         let currentStateNodes = [...state.nodes];
-        setSwapList(data.swaps);
+        setSwapList(swaps);
         setCurrentStep(-1);
         
         let stepIdx = 0;
-        for (const swap of data.swaps) {
+        for (const swap of swaps) {
           setActiveSwap(swap);
           setCurrentStep(stepIdx);
           
-          // Pause before next swap
           await new Promise(r => setTimeout(r, 800));
           
-          // Send to backend state to sync
-          await fetch("/api/state", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: 'swap', node1: swap.node1, node2: swap.node2 })
-          });
-          
-          // Update local state directly so UI updates smoothly
           const n1 = currentStateNodes.find(n => n.id === swap.node1);
           const n2 = currentStateNodes.find(n => n.id === swap.node2);
           if (n1 && n2) {
@@ -132,8 +133,6 @@ export default function Home() {
           stepIdx++;
         }
         setActiveSwap(null);
-      } else {
-        alert("Routing failed: " + (data.error || "Unknown error"));
       }
     } catch (e) {
       console.error("Routing execution error", e);
@@ -154,15 +153,6 @@ export default function Home() {
         nodes: Array.from({ length: numNodes }, (_, i) => ({ id: i, packet: i }))
     };
     setState(newState);
-    try {
-        await fetch("/api/state", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(newState)
-        });
-    } catch (e) {
-        console.error("Error posting state", e);
-    }
   };
 
   return (
@@ -214,7 +204,7 @@ export default function Home() {
 
         <div className="mb-4">
             <span className="block text-sm font-heading font-bold mb-1 uppercase">Algorithm</span>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
                 <button 
                   onClick={() => setAlgo('merge')}
                   disabled={isRouting}
@@ -225,6 +215,11 @@ export default function Home() {
                   disabled={isRouting}
                   className={`px-4 py-1.5 text-[12px] font-heading font-bold uppercase border border-black ${algo === 'bfs' ? 'bg-black text-white' : 'bg-white text-black'} disabled:opacity-50`}
                 >BFS</button>
+                <button 
+                  onClick={() => setAlgo('entropy')}
+                  disabled={isRouting}
+                  className={`px-4 py-1.5 text-[12px] font-heading font-bold uppercase border border-black ${algo === 'entropy' ? 'bg-black text-white' : 'bg-white text-black'} disabled:opacity-50`}
+                >Entropy</button>
             </div>
         </div>
 
