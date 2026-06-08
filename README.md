@@ -54,13 +54,10 @@ This project includes a core algorithm module compiled to WebAssembly, and a ful
   - [x] chart of experiment (export statistical distributions)
 - [x] visualization module
   - [x] WebAssembly frontend integration
-  - [ ] the cube
+  - [x] the cube
     - [x] animation on the packet number when packet's pos is changed
-    - [ ] animation on the edge when packet's pos is changed
-  - [ ] apis
-    - [x] swap
-    - [ ] request a specific packet sequence
-  - [ ] the panel
+    - [x] animation on the edge when packet's pos is changed
+  - [x] the panel
     - [x] randomly permutaion
     - [x] permutate the given sequence
     - [x] steps
