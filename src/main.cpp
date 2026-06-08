@@ -77,16 +77,27 @@ private:
 public:
     HypercubeRouter(const std::vector<int>& perm) {
         n = perm.size();
-        bit_levels = (n == 8) ? 3 : 4;
-        start_state = pack_state(perm);
-        target_state = get_target_state(n);
+        bit_levels = 0;
+        int temp = n;
+        while (temp > 1) {
+            bit_levels++;
+            temp >>= 1;
+        }
+        if (n <= 16) {
+            start_state = pack_state(perm);
+            target_state = get_target_state(n);
+        } else {
+            start_state = 0;
+            target_state = 0;
+        }
     }
 
     bool isValidSize() const {
-        return (n == 8 || n == 16);
+        return (n > 0 && (n & (n - 1)) == 0);
     }
 
     bool solveWithBFS(std::vector<std::pair<int, int>>& swap_order) {
+        if (n > 16) { std::cerr << "Error: BFS only supports up to n=16.\n"; return false; }
         if (start_state == target_state) return true;
 
         std::queue<uint64_t> q;
@@ -164,6 +175,7 @@ public:
     }
 
     bool solveWithAStar(std::vector<std::pair<int, int>>& swap_order) {
+        if (n > 16) { std::cerr << "Error: A* only supports up to n=16.\n"; return false; }
         if (start_state == target_state) return true;
 
         std::priority_queue<AStarState, std::vector<AStarState>, std::greater<AStarState>> pq;
@@ -281,6 +293,7 @@ public:
 
     // Algorithm 4: Entropy-Cycle Search (Cycle Decomp + Entropy)
     bool solveWithEntropyCycle(std::vector<int>& current_perm, std::vector<std::pair<int, int>>& swap_order) {
+        if (n > 16) { std::cerr << "Error: Entropy-Cycle only supports up to n=16.\n"; return false; }
         uint64_t start = pack_state(current_perm);
         if (start == target_state) return true;
 
@@ -395,7 +408,7 @@ int main(int argc, char *argv[]) {
     HypercubeRouter router(perm);
     if (!router.isValidSize()) {
         if (isTestMode) std::cout << "-1\n";
-        else std::cerr << "Error: The input must contain exactly 8 or 16 numbers.\n";
+        else std::cerr << "Error: The input size must be a power of 2.\n";
         return 1;
     }
 
