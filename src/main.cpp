@@ -20,44 +20,41 @@ class HypercubeRouter {
 private:
     int n;
     int bit_levels;
-    uint64_t start_state;
-    uint64_t target_state;
+    std::string start_state;
+    std::string target_state;
 
-    uint64_t pack_state(const std::vector<int>& perm) const {
-        uint64_t state = 0;
+    std::string pack_state(const std::vector<int>& perm) const {
+        std::string state;
+        state.reserve(perm.size());
         for (size_t i = 0; i < perm.size(); ++i) {
-            state |= (static_cast<uint64_t>(perm[i]) << (i * 4));
+            state.push_back(static_cast<char>(perm[i]));
         }
         return state;
     }
 
-    uint64_t get_target_state(int size) const {
-        uint64_t state = 0;
+    std::string get_target_state(int size) const {
+        std::string state;
+        state.reserve(size);
         for (int i = 0; i < size; ++i) {
-            state |= (static_cast<uint64_t>(i) << (i * 4));
+            state.push_back(static_cast<char>(i));
         }
         return state;
     }
 
     int popcount(int x) const {
-        int count = 0;
-        while (x) {
-            count += (x & 1);
-            x >>= 1;
-        }
-        return count;
+        return __builtin_popcount(x);
     }
 
-    std::vector<int> unpack_state(uint64_t state) const {
+    std::vector<int> unpack_state(const std::string& state) const {
         std::vector<int> perm(n);
         for (int i = 0; i < n; ++i) {
-            perm[i] = (state >> (i * 4)) & 15ULL;
+            perm[i] = static_cast<int>(static_cast<unsigned char>(state[i]));
         }
         return perm;
     }
 
     struct AStarState {
-        uint64_t state;
+        std::string state;
         int g;
         int f;
         bool operator>(const AStarState& other) const {
@@ -65,10 +62,10 @@ private:
         }
     };
 
-    int computeHeuristic(uint64_t state) const {
+    int computeHeuristic(const std::string& state) const {
         int total_dist = 0;
         for (int i = 0; i < n; ++i) {
-            int val = (state >> (i * 4)) & 15ULL;
+            int val = static_cast<int>(static_cast<unsigned char>(state[i]));
             total_dist += popcount(i ^ val);
         }
         return (total_dist + 1) / 2;
@@ -83,12 +80,9 @@ public:
             bit_levels++;
             temp >>= 1;
         }
-        if (n <= 16) {
+        if (n > 0) {
             start_state = pack_state(perm);
             target_state = get_target_state(n);
-        } else {
-            start_state = 0;
-            target_state = 0;
         }
     }
 
@@ -97,11 +91,10 @@ public:
     }
 
     bool solveWithBFS(std::vector<std::pair<int, int>>& swap_order) {
-        if (n > 16) { std::cerr << "Error: BFS only supports up to n=16.\n"; return false; }
         if (start_state == target_state) return true;
 
-        std::queue<uint64_t> q;
-        std::unordered_map<uint64_t, std::pair<uint64_t, std::pair<int, int>>> parent;
+        std::queue<std::string> q;
+        std::unordered_map<std::string, std::pair<std::string, std::pair<int, int>>> parent;
 
         q.push(start_state);
         parent[start_state] = {start_state, {-1, -1}};
@@ -109,7 +102,7 @@ public:
         bool found = false;
 
         while (!q.empty()) {
-            uint64_t curr = q.front();
+            std::string curr = q.front();
             q.pop();
 
             if (curr == target_state) {
@@ -121,12 +114,8 @@ public:
                 for (int b = 0; b < bit_levels; ++b) {
                     int j = i ^ (1 << b);
                     if (i < j) {
-                        uint64_t val_i = (curr >> (i * 4)) & 15ULL;
-                        uint64_t val_j = (curr >> (j * 4)) & 15ULL;
-
-                        uint64_t next_state = curr;
-                        next_state &= ~((15ULL << (i * 4)) | (15ULL << (j * 4)));
-                        next_state |= (val_i << (j * 4)) | (val_j << (i * 4));
+                        std::string next_state = curr;
+                        std::swap(next_state[i], next_state[j]);
 
                         if (parent.find(next_state) == parent.end()) {
                             parent[next_state] = {curr, {i, j}};
@@ -138,7 +127,7 @@ public:
         }
 
         if (found) {
-            uint64_t curr = target_state;
+            std::string curr = target_state;
             while (curr != start_state) {
                 auto p = parent[curr];
                 swap_order.push_back(p.second);
@@ -175,12 +164,11 @@ public:
     }
 
     bool solveWithAStar(std::vector<std::pair<int, int>>& swap_order) {
-        if (n > 16) { std::cerr << "Error: A* only supports up to n=16.\n"; return false; }
         if (start_state == target_state) return true;
 
         std::priority_queue<AStarState, std::vector<AStarState>, std::greater<AStarState>> pq;
-        std::unordered_map<uint64_t, int> g_score;
-        std::unordered_map<uint64_t, std::pair<uint64_t, std::pair<int, int>>> parent;
+        std::unordered_map<std::string, int> g_score;
+        std::unordered_map<std::string, std::pair<std::string, std::pair<int, int>>> parent;
 
         int h_start = computeHeuristic(start_state);
         pq.push({start_state, 0, h_start});
@@ -193,7 +181,7 @@ public:
             AStarState curr = pq.top();
             pq.pop();
 
-            uint64_t curr_state = curr.state;
+            std::string curr_state = curr.state;
 
             if (curr_state == target_state) {
                 found = true;
@@ -206,12 +194,8 @@ public:
                 for (int b = 0; b < bit_levels; ++b) {
                     int j = i ^ (1 << b);
                     if (i < j) {
-                        uint64_t val_i = (curr_state >> (i * 4)) & 15ULL;
-                        uint64_t val_j = (curr_state >> (j * 4)) & 15ULL;
-
-                        uint64_t next_state = curr_state;
-                        next_state &= ~((15ULL << (i * 4)) | (15ULL << (j * 4)));
-                        next_state |= (val_i << (j * 4)) | (val_j << (i * 4));
+                        std::string next_state = curr_state;
+                        std::swap(next_state[i], next_state[j]);
 
                         int tentative_g = curr.g + 1;
                         if (g_score.find(next_state) == g_score.end() || tentative_g < g_score[next_state]) {
@@ -226,7 +210,7 @@ public:
         }
 
         if (found) {
-            uint64_t curr = target_state;
+            std::string curr = target_state;
             while (curr != start_state) {
                 auto p = parent[curr];
                 swap_order.push_back(p.second);
@@ -241,12 +225,7 @@ public:
     // Removed calculateCycleHeuristic
 
     // Heuristic function combining Cycle Decomposition, Group Theory, and Information Theory
-    double calculateEntropyCycleHeuristic(uint64_t state) const {
-        std::vector<int> perm(n);
-        for (int i = 0; i < n; ++i) {
-            perm[i] = (state >> (i * 4)) & 15ULL;
-        }
-
+    double calculateEntropyCycleHeuristic(const std::string& state) const {
         int cycles = 0;
         std::vector<bool> visited(n, false);
         for (int i = 0; i < n; i++) {
@@ -255,7 +234,7 @@ public:
                 int curr = i;
                 while (!visited[curr]) {
                     visited[curr] = true;
-                    curr = perm[curr];
+                    curr = static_cast<int>(static_cast<unsigned char>(state[curr]));
                 }
             }
         }
@@ -264,16 +243,11 @@ public:
         double total_distance = 0;
         std::unordered_map<int, int> error_counts;
         for (int i = 0; i < n; ++i) {
-            int error = i ^ perm[i]; 
+            int error = i ^ static_cast<int>(static_cast<unsigned char>(state[i])); 
             if (error != 0) {
                 error_counts[error]++;
             }
-            int dist = 0;
-            int temp = error;
-            while (temp > 0) {
-                dist += (temp & 1);
-                temp >>= 1;
-            }
+            int dist = __builtin_popcount(error);
             total_distance += dist;
         }
 
@@ -293,13 +267,12 @@ public:
 
     // Algorithm 4: Entropy-Cycle Search (Cycle Decomp + Entropy)
     bool solveWithEntropyCycle(std::vector<int>& current_perm, std::vector<std::pair<int, int>>& swap_order) {
-        if (n > 16) { std::cerr << "Error: Entropy-Cycle only supports up to n=16.\n"; return false; }
-        uint64_t start = pack_state(current_perm);
+        std::string start = pack_state(current_perm);
         if (start == target_state) return true;
 
-        std::priority_queue<std::pair<double, uint64_t>, std::vector<std::pair<double, uint64_t>>, std::greater<std::pair<double, uint64_t>>> pq;
-        std::unordered_map<uint64_t, std::pair<uint64_t, std::pair<int, int>>> parent;
-        std::unordered_map<uint64_t, int> g_score;
+        std::priority_queue<std::pair<double, std::string>, std::vector<std::pair<double, std::string>>, std::greater<std::pair<double, std::string>>> pq;
+        std::unordered_map<std::string, std::pair<std::string, std::pair<int, int>>> parent;
+        std::unordered_map<std::string, int> g_score;
 
         pq.push({calculateEntropyCycleHeuristic(start), start});
         parent[start] = {start, {-1, -1}};
@@ -310,7 +283,7 @@ public:
         const int MAX_EXPANSIONS = 500000;
 
         while (!pq.empty() && expansions < MAX_EXPANSIONS) {
-            uint64_t curr = pq.top().second;
+            std::string curr = pq.top().second;
             pq.pop();
             
             if (curr == target_state) {
@@ -325,12 +298,8 @@ public:
                 for (int b = 0; b < bit_levels; ++b) {
                     int j = i ^ (1 << b);
                     if (i < j) {
-                        uint64_t val_i = (curr >> (i * 4)) & 15ULL;
-                        uint64_t val_j = (curr >> (j * 4)) & 15ULL;
-
-                        uint64_t next_state = curr;
-                        next_state &= ~((15ULL << (i * 4)) | (15ULL << (j * 4)));
-                        next_state |= (val_i << (j * 4)) | (val_j << (i * 4));
+                        std::string next_state = curr;
+                        std::swap(next_state[i], next_state[j]);
 
                         int tentative_g = curr_g + 1;
 
@@ -348,7 +317,7 @@ public:
         }
 
         if (found) {
-            uint64_t curr = target_state;
+            std::string curr = target_state;
             while (curr != start) {
                 auto p = parent[curr];
                 swap_order.push_back(p.second);
@@ -447,9 +416,23 @@ int main(int argc, char *argv[]) {
                 else if (algo == "entropy_cycle") algo_name = "Entropy-Cycle Search";
                 std::cout << "Target aligned using " << algo_name << ". Swaps required: " << swap_order.size() << "\n\n";
                 std::cout << "Swap Order Vector List:\n";
+                
+                std::vector<int> current_state = perm;
+                std::cout << "Initial Packet Sequence: [";
+                for (size_t j = 0; j < current_state.size(); ++j) {
+                    std::cout << current_state[j] << (j == current_state.size() - 1 ? "" : ", ");
+                }
+                std::cout << "]\n";
+
                 for (size_t i = 0; i < swap_order.size(); ++i) {
+                    std::swap(current_state[swap_order[i].first], current_state[swap_order[i].second]);
                     std::cout << "Step " << (i + 1) << ": Swap index " 
-                              << swap_order[i].first << " and " << swap_order[i].second << "\n";
+                              << swap_order[i].first << " and " << swap_order[i].second << "\n"
+                              << "  -> Packet sequence: [";
+                    for (size_t j = 0; j < current_state.size(); ++j) {
+                        std::cout << current_state[j] << (j == current_state.size() - 1 ? "" : ", ");
+                    }
+                    std::cout << "]\n";
                 }
             }
         }

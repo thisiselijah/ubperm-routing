@@ -97,6 +97,18 @@ python scripts/plot.py
 python scripts/plot.py -save
 ```
 
+### 4. WebAssembly Module Compilation
+The visualization frontend relies on a WebAssembly module (`router.wasm`) to compute paths quickly in the browser. You can recompile `src/wasm.cpp` into WebAssembly using Emscripten. Ensure your environment has Emscripten initialized (e.g. `source ~/emsdk/emsdk_env.sh`).
+
+```bash
+# Compile the WASM bindings directly into the Next.js public directory
+emcc -O3 --bind src/wasm.cpp -o website/public/router.js \
+  -s MODULARIZE=1 \
+  -s EXPORT_NAME=createRouterModule \
+  -s ALLOW_MEMORY_GROWTH=1
+```
+*Note: The `-s ALLOW_MEMORY_GROWTH=1` flag is vital to prevent Out-Of-Memory (OOM) aborts in the browser when expanding millions of search states for larger dimensions.*
+
 ## Component
 This project includes a core algorithm module compiled to WebAssembly, and a fully static Next.js visualization module. We also write a script to evaluate the algorithm against a baseline algorithm, which is BFS.
 
