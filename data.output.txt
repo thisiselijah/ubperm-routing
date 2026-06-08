@@ -61,3 +61,20 @@
 
 Plot saved to `assets/figure-20260608_153908.png`.
 
+---
+
+## Web Integration of A* Search (2026-06-08)
+
+1. **WASM Core Implementation**:
+   - Integrated `solveWithAStar` and its dependencies (e.g. `computeHeuristic`) into [wasm.cpp](file:///home/user/ubperm-routing/src/wasm.cpp).
+   - Added checking for `"astar"` algorithm option inside the `route_packets` entry point.
+   
+2. **Compilation & Packaging**:
+   - Recompiled `wasm.cpp` using local Emscripten toolchain into `router.js` and `router.wasm` in the `website/public/` folder.
+   - Built the Next.js site successfully to verify compatibility.
+
+3. **Frontend UI Update**:
+   - Added the "A* Search" button to the algorithm selector panel in [page.tsx](file:///home/user/ubperm-routing/website/src/app/page.tsx).
+   - Set the state constraints to allow selection and visualization of `astar` routing on 3-cube and 4-cube networks.
+
+
