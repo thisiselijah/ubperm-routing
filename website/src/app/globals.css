@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
   --color-primary: #e91d2a;
@@ -62,3 +63,24 @@ h1, h2, h3, h4, h5, h6 {
   display: inline-block;
   transform-style: preserve-3d;
 }
+
+.dark {
+  --color-canvas: #000000;
+  --color-surface: #000000;
+  --color-ink: #ffffff;
+  --color-frame-ink: #ffffff;
+}
+
+/* Fallback for Tailwind v4 dark variant cache issues */
+.dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 { color: #ffffff !important; }
+.dark .dark\:bg-black { background-color: #000000 !important; }
+.dark .dark\:text-white { color: #ffffff !important; }
+.dark .dark\:border-white { border-color: #ffffff !important; }
+.dark .dark\:shadow-\[4px_4px_0_\#fff\] { box-shadow: 4px 4px 0 #ffffff !important; }
+.dark .dark\:shadow-\[2px_2px_0_rgba\(255\,255\,255\,1\)\] { box-shadow: 2px 2px 0 rgba(255,255,255,1) !important; }
+.dark .dark\:shadow-\[1px_1px_0_rgba\(255\,255\,255\,1\)\] { box-shadow: 1px 1px 0 rgba(255,255,255,1) !important; }
+.dark .dark\:bg-white { background-color: #ffffff !important; }
+.dark .dark\:text-black { color: #000000 !important; }
+.dark .dark\:border-black { border-color: #000000 !important; }
+.dark .dark\:hover\:bg-white:hover { background-color: #ffffff !important; }
+.dark .dark\:hover\:text-black:hover { color: #000000 !important; }
