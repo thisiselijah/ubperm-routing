@@ -30,14 +30,15 @@ def main():
     merge_data = read_data('data/merge.txt')
     astar_data = read_data('data/astar.txt')
     entropy_cycle_data = read_data('data/entropy_cycle.txt')
+    beam_search_data = read_data('data/beam_search.txt')
 
     time_slot = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     os.makedirs('data', exist_ok=True)
     summary_path = f'data/summary-{time_slot}.txt'
 
     with open(summary_path, 'w') as f_out:
-        if not bfs_data and not merge_data and not astar_data and not entropy_cycle_data:
-            f_out.write("No data found in data/bfs.txt, data/merge.txt, data/astar.txt, or data/entropy_cycle.txt. Please run test.py first.\n")
+        if not bfs_data and not merge_data and not astar_data and not entropy_cycle_data and not beam_search_data:
+            f_out.write("No data found in data/bfs.txt, data/merge.txt, data/astar.txt, data/entropy_cycle.txt, or data/beam_search.txt. Please run test.py first.\n")
             print(f"No data found. Log written to {summary_path}")
             return
 
@@ -63,6 +64,7 @@ def main():
         write_statistics('Merge Sort', merge_data)
         write_statistics('A* Search', astar_data)
         write_statistics('Entropy-Cycle Search', entropy_cycle_data)
+        write_statistics('Beam Search', beam_search_data)
 
     print(f"Statistical summary successfully written to {summary_path}")
 
@@ -75,6 +77,7 @@ def main():
     color_merge = '#FF006E'    # Hot Pink
     color_astar = '#FFD166'    # Bright Yellow
     color_entropy_cycle = '#118AB2' # Vibrant Teal
+    color_beam = '#9D4EDD'      # Purple
 
     def plot_histogram(ax, data, color, label):
         if not data:
@@ -114,20 +117,20 @@ def main():
     plot_histogram(ax2, merge_data, color_merge, 'Merge Sort')
     plot_histogram(ax3, astar_data, color_astar, 'A* Search')
     plot_histogram(ax4, entropy_cycle_data, color_entropy_cycle, 'Entropy-Cycle Search')
+    plot_histogram(ax5, beam_search_data, color_beam, 'Beam Search')
 
-    # Comparison Curves (ax5)
-    plot_curve(ax5, bfs_data, color_bfs, 'BFS', linewidth=5.5, linestyle='-')
-    plot_curve(ax5, merge_data, color_merge, 'Merge Sort', linewidth=3.5, linestyle='-')
-    plot_curve(ax5, astar_data, color_astar, 'A* Search', linewidth=3, linestyle='-.')
-    plot_curve(ax5, entropy_cycle_data, color_entropy_cycle, 'Entropy-Cycle Search', linewidth=3, linestyle='--')
+    # Comparison Curves (ax6)
+    plot_curve(ax6, bfs_data, color_bfs, 'BFS', linewidth=5.5, linestyle='-')
+    plot_curve(ax6, merge_data, color_merge, 'Merge Sort', linewidth=3.5, linestyle='-')
+    plot_curve(ax6, astar_data, color_astar, 'A* Search', linewidth=3, linestyle='-.')
+    plot_curve(ax6, entropy_cycle_data, color_entropy_cycle, 'Entropy-Cycle Search', linewidth=3, linestyle='--')
+    plot_curve(ax6, beam_search_data, color_beam, 'Beam Search', linewidth=3, linestyle=':')
 
-    ax5.set_title("Approximation Curves Comparison", fontsize=14, fontweight='bold', color='#333333')
-    ax5.set_xlabel("Number of Swaps (Steps)", fontsize=12)
-    ax5.set_ylabel("Number of Cases", fontsize=12)
-    ax5.grid(axis='both', linestyle='--', alpha=0.4)
-    ax5.legend(fontsize=12, loc='upper right')
-
-    ax6.axis('off')
+    ax6.set_title("Approximation Curves Comparison", fontsize=14, fontweight='bold', color='#333333')
+    ax6.set_xlabel("Number of Swaps (Steps)", fontsize=12)
+    ax6.set_ylabel("Number of Cases", fontsize=12)
+    ax6.grid(axis='both', linestyle='--', alpha=0.4)
+    ax6.legend(fontsize=12, loc='upper right')
 
     plt.suptitle("Hypercube Permutation Routing Comparison", fontsize=18, fontweight='bold', y=0.98)
     plt.tight_layout(rect=[0, 0, 1, 0.95])

@@ -37,7 +37,7 @@ def main():
     parser = argparse.ArgumentParser(description="Hypercube Routing Test Runner")
     parser.add_argument("-cube", type=int, required=True, help="超立方體維度 (例如 3 代表 8 個數字，4 代表 16 個數字)")
     parser.add_argument("-exe", type=str, default="src/bin/routing", help="C++ 執行檔的路徑")
-    parser.add_argument("-algo", type=str, default="bfs", choices=["bfs", "merge", "astar", "entropy_cycle"], help="演算法 (bfs, merge, astar 或 entropy_cycle)")
+    parser.add_argument("-algo", type=str, default="bfs", choices=["bfs", "merge", "astar", "entropy_cycle", "beam_search"], help="演算法 (bfs, merge, astar, entropy_cycle 或 beam_search)")
 
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("-auto", action="store_true", help="窮舉並執行所有可能的排列 (警告：僅適用於 N=8)")
