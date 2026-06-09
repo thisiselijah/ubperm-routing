@@ -321,10 +321,12 @@ public:
 
         double base_heuristic = std::max((double)group_swaps, total_distance / 2.0);
         
-        double entropy_weight = 0.1 + 0.01 * curr_g;
-        if (entropy_weight > 2.0) entropy_weight = 2.0;
+        // Strict Tie-Breaker: Entropy penalty is bounded < 0.5 to preserve Admissibility of base_heuristic
+        double adaptive_weight = 0.05 + 0.005 * curr_g;
+        if (adaptive_weight > 0.49) adaptive_weight = 0.49;
+        double entropy_penalty = (entropy / 8.0) * adaptive_weight;
 
-        return base_heuristic + entropy_weight * entropy;
+        return base_heuristic + entropy_penalty;
     }
 
     // Removed solveWithCycleDecomp
@@ -358,6 +360,35 @@ public:
             expansions++;
             int curr_g = g_score[curr];
 
+            // --- O(1) Delta Update Pre-computation ---
+            int base_cycles = 0;
+            std::vector<int> cycle_id(n, -1);
+            for (int k = 0; k < n; k++) {
+                if (cycle_id[k] == -1) {
+                    int c = k;
+                    while (cycle_id[c] == -1) {
+                        cycle_id[c] = base_cycles;
+                        c = static_cast<int>(static_cast<unsigned char>(curr[c]));
+                    }
+                    base_cycles++;
+                }
+            }
+            int base_group_swaps = n - base_cycles;
+
+            int base_distance = 0;
+            std::vector<int> error_counts(256, 0);
+            for (int k = 0; k < n; ++k) {
+                int error = k ^ static_cast<int>(static_cast<unsigned char>(curr[k])); 
+                if (error != 0) error_counts[error]++;
+                base_distance += __builtin_popcount(error);
+            }
+
+            double base_entropy = 0.0;
+            for (int k = 1; k < 256; ++k) {
+                if (error_counts[k] > 0) base_entropy += precomputed_entropy[error_counts[k]];
+            }
+            // ----------------------------------------
+
             for (int i = 0; i < n; ++i) {
                 for (int b = 0; b < bit_levels; ++b) {
                     int j = i ^ (1 << b);
@@ -368,10 +399,54 @@ public:
                         int tentative_g = curr_g + 1;
 
                         if (g_score.find(next_state) == g_score.end() || tentative_g < g_score[next_state]) {
+                            // -- O(1) Delta Update --
+                            int new_group_swaps = base_group_swaps;
+                            if (cycle_id[i] == cycle_id[j]) {
+                                new_group_swaps--;
+                            } else {
+                                new_group_swaps++;
+                            }
+
+                            int e_i = i ^ static_cast<int>(static_cast<unsigned char>(curr[i]));
+                            int e_j = j ^ static_cast<int>(static_cast<unsigned char>(curr[j]));
+                            int ne_i = i ^ static_cast<int>(static_cast<unsigned char>(curr[j]));
+                            int ne_j = j ^ static_cast<int>(static_cast<unsigned char>(curr[i]));
+                            
+                            int new_distance = base_distance 
+                                - __builtin_popcount(e_i) - __builtin_popcount(e_j) 
+                                + __builtin_popcount(ne_i) + __builtin_popcount(ne_j);
+
+                            double new_entropy = base_entropy;
+                            auto remove_err = [&](int e) {
+                                if (e != 0) {
+                                    new_entropy -= precomputed_entropy[error_counts[e]];
+                                    error_counts[e]--;
+                                    if (error_counts[e] > 0) new_entropy += precomputed_entropy[error_counts[e]];
+                                }
+                            };
+                            auto add_err = [&](int e) {
+                                if (e != 0) {
+                                    if (error_counts[e] > 0) new_entropy -= precomputed_entropy[error_counts[e]];
+                                    error_counts[e]++;
+                                    new_entropy += precomputed_entropy[error_counts[e]];
+                                }
+                            };
+                            
+                            remove_err(e_i); remove_err(e_j);
+                            add_err(ne_i); add_err(ne_j);
+                            
+                            double base_h = std::max((double)new_group_swaps, new_distance / 2.0);
+                            double adaptive_weight = 0.05 + 0.005 * tentative_g;
+                            if (adaptive_weight > 0.49) adaptive_weight = 0.49;
+                            double h = base_h + (new_entropy / 8.0) * adaptive_weight;
+
+                            remove_err(ne_j); remove_err(ne_i);
+                            add_err(e_j); add_err(e_i);
+                            // -----------------------
+
                             parent[next_state] = {curr, {i, j}};
                             g_score[next_state] = tentative_g;
                             
-                            double h = calculateEntropyCycleHeuristic(next_state, tentative_g);
                             double f = tentative_g + 2.0 * h; 
                             pq.push({f, next_state});
                         }
@@ -447,6 +522,35 @@ public:
                     return flat_swaps;
                 }
 
+                // --- O(1) Delta Update Pre-computation for Beam Search ---
+                int base_cycles = 0;
+                std::vector<int> cycle_id(n, -1);
+                for (int k = 0; k < n; k++) {
+                    if (cycle_id[k] == -1) {
+                        int c = k;
+                        while (cycle_id[c] == -1) {
+                            cycle_id[c] = base_cycles;
+                            c = static_cast<int>(static_cast<unsigned char>(curr_state[c]));
+                        }
+                        base_cycles++;
+                    }
+                }
+                int base_group_swaps = n - base_cycles;
+
+                int base_distance = 0;
+                std::vector<int> error_counts(256, 0);
+                for (int k = 0; k < n; ++k) {
+                    int error = k ^ static_cast<int>(static_cast<unsigned char>(curr_state[k])); 
+                    if (error != 0) error_counts[error]++;
+                    base_distance += __builtin_popcount(error);
+                }
+
+                double base_entropy = 0.0;
+                for (int k = 1; k < 256; ++k) {
+                    if (error_counts[k] > 0) base_entropy += precomputed_entropy[error_counts[k]];
+                }
+                // ---------------------------------------------------------
+
                 for (int i = 0; i < n; ++i) {
                     for (int b = 0; b < bit_levels; ++b) {
                         int j = i ^ (1 << b);
@@ -455,7 +559,51 @@ public:
                             std::swap(next_state[i], next_state[j]);
 
                             if (global_visited.find(next_state) == global_visited.end()) {
-                                double h = calculateEntropyCycleHeuristic(next_state, depth + 1);
+                                // -- O(1) Delta Update --
+                                int new_group_swaps = base_group_swaps;
+                                if (cycle_id[i] == cycle_id[j]) {
+                                    new_group_swaps--;
+                                } else {
+                                    new_group_swaps++;
+                                }
+
+                                int e_i = i ^ static_cast<int>(static_cast<unsigned char>(curr_state[i]));
+                                int e_j = j ^ static_cast<int>(static_cast<unsigned char>(curr_state[j]));
+                                int ne_i = i ^ static_cast<int>(static_cast<unsigned char>(curr_state[j]));
+                                int ne_j = j ^ static_cast<int>(static_cast<unsigned char>(curr_state[i]));
+                                
+                                int new_distance = base_distance 
+                                    - __builtin_popcount(e_i) - __builtin_popcount(e_j) 
+                                    + __builtin_popcount(ne_i) + __builtin_popcount(ne_j);
+
+                                double new_entropy = base_entropy;
+                                auto remove_err = [&](int e) {
+                                    if (e != 0) {
+                                        new_entropy -= precomputed_entropy[error_counts[e]];
+                                        error_counts[e]--;
+                                        if (error_counts[e] > 0) new_entropy += precomputed_entropy[error_counts[e]];
+                                    }
+                                };
+                                auto add_err = [&](int e) {
+                                    if (e != 0) {
+                                        if (error_counts[e] > 0) new_entropy -= precomputed_entropy[error_counts[e]];
+                                        error_counts[e]++;
+                                        new_entropy += precomputed_entropy[error_counts[e]];
+                                    }
+                                };
+                                
+                                remove_err(e_i); remove_err(e_j);
+                                add_err(ne_i); add_err(ne_j);
+                                
+                                double base_h = std::max((double)new_group_swaps, new_distance / 2.0);
+                                double adaptive_weight = 0.05 + 0.005 * (depth + 1);
+                                if (adaptive_weight > 0.49) adaptive_weight = 0.49;
+                                double h = base_h + (new_entropy / 8.0) * adaptive_weight;
+
+                                remove_err(ne_j); remove_err(ne_i);
+                                add_err(e_j); add_err(e_i);
+                                // -----------------------
+
                                 next_candidates.push_back({next_state, h, curr_state, {i, j}});
                             }
                         }
