@@ -13,7 +13,7 @@ interface AppState {
 export default function Home() {
   const [displayMethod, setDisplayMethod] = useState<'text' | 'color'>('text');
   const [shuffleTrigger, setShuffleTrigger] = useState(0);
-  const [algo, setAlgo] = useState<'merge' | 'bfs' | 'astar' | 'entropy_cycle' | 'beam_search'>('merge');
+  const [algo, setAlgo] = useState<'merge' | 'bfs' | 'astar' | 'entropy_cycle' | 'beam_search' | 'stochastic'>('merge');
   const [isRouting, setIsRouting] = useState(false);
   const [activeSwap, setActiveSwap] = useState<{ node1: number, node2: number } | null>(null);
   const [swapList, setSwapList] = useState<{ node1: number, node2: number }[]>([]);
@@ -206,35 +206,22 @@ export default function Home() {
             )}
         </div>
 
-        <div className="mb-4">
-            <span className="block text-sm font-heading font-bold mb-1 uppercase">Algorithm</span>
-            <div className="flex flex-wrap gap-2">
-                <button 
-                  onClick={() => setAlgo('merge')}
-                  disabled={isRouting}
-                  className={`px-4 py-1.5 text-[12px] font-heading font-bold uppercase border border-black ${algo === 'merge' ? 'bg-black text-white' : 'bg-white text-black'} disabled:opacity-50`}
-                >Merge Sort</button>
-                <button 
-                  onClick={() => setAlgo('bfs')}
-                  disabled={isRouting}
-                  className={`px-4 py-1.5 text-[12px] font-heading font-bold uppercase border border-black ${algo === 'bfs' ? 'bg-black text-white' : 'bg-white text-black'} disabled:opacity-50`}
-                >BFS</button>
-                <button 
-                  onClick={() => setAlgo('astar')}
-                  disabled={isRouting}
-                  className={`px-4 py-1.5 text-[12px] font-heading font-bold uppercase border border-black ${algo === 'astar' ? 'bg-black text-white' : 'bg-white text-black'} disabled:opacity-50`}
-                >A* Search</button>
-                <button 
-                  onClick={() => setAlgo('entropy_cycle')}
-                  disabled={isRouting}
-                  className={`px-4 py-1.5 text-[12px] font-heading font-bold uppercase border border-black ${algo === 'entropy_cycle' ? 'bg-black text-white' : 'bg-white text-black'} disabled:opacity-50`}
-                >Entropy-Cycle</button>
-                <button 
-                  onClick={() => setAlgo('beam_search')}
-                  disabled={isRouting}
-                  className={`px-4 py-1.5 text-[12px] font-heading font-bold uppercase border border-black ${algo === 'beam_search' ? 'bg-black text-white' : 'bg-white text-black'} disabled:opacity-50`}
-                >Beam Search</button>
-            </div>
+        <div className="mb-4 flex flex-col items-start gap-1">
+            <label htmlFor="algo-select" className="block text-sm font-heading font-bold uppercase">Algorithm</label>
+            <select 
+              id="algo-select"
+              value={algo} 
+              onChange={(e) => setAlgo(e.target.value as any)}
+              disabled={isRouting}
+              className="bg-white text-black border border-black font-body px-1.5 py-1 rounded-none w-full outline-none disabled:opacity-50"
+            >
+                <option value="merge">Merge Sort</option>
+                <option value="bfs">Breadth-First Search (BFS)</option>
+                <option value="astar">A* Search</option>
+                <option value="entropy_cycle">Entropy-Cycle Search</option>
+                <option value="beam_search">Beam Search</option>
+                <option value="stochastic">Stochastic Search (Tabu)</option>
+            </select>
         </div>
 
         <button 

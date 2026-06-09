@@ -20,24 +20,24 @@ class HypercubeRouter {
 private:
     int n;
     int bit_levels;
-    std::string start_state;
-    std::string target_state;
+    std::u16string start_state;
+    std::u16string target_state;
     std::vector<double> precomputed_entropy;
 
-    std::string pack_state(const std::vector<int>& perm) const {
-        std::string state;
+    std::u16string pack_state(const std::vector<int>& perm) const {
+        std::u16string state;
         state.reserve(perm.size());
         for (size_t i = 0; i < perm.size(); ++i) {
-            state.push_back(static_cast<char>(perm[i]));
+            state.push_back(static_cast<char16_t>(perm[i]));
         }
         return state;
     }
 
-    std::string get_target_state(int size) const {
-        std::string state;
+    std::u16string get_target_state(int size) const {
+        std::u16string state;
         state.reserve(size);
         for (int i = 0; i < size; ++i) {
-            state.push_back(static_cast<char>(i));
+            state.push_back(static_cast<char16_t>(i));
         }
         return state;
     }
@@ -46,16 +46,16 @@ private:
         return __builtin_popcount(x);
     }
 
-    std::vector<int> unpack_state(const std::string& state) const {
+    std::vector<int> unpack_state(const std::u16string& state) const {
         std::vector<int> perm(n);
         for (int i = 0; i < n; ++i) {
-            perm[i] = static_cast<int>(static_cast<unsigned char>(state[i]));
+            perm[i] = static_cast<int>(static_cast<char16_t>(state[i]));
         }
         return perm;
     }
 
     struct AStarState {
-        std::string state;
+        std::u16string state;
         int g;
         int f;
         bool operator>(const AStarState& other) const {
@@ -624,6 +624,147 @@ public:
         }
         return false;
     }
+bool solveWithStochasticSearch(std::vector<int>& current_perm, std::vector<std::pair<int, int>>& swap_order) {
+        std::u16string target = get_target_state(n);
+        std::u16string start = pack_state(current_perm);
+        if (start == target) return true;
+
+        int max_restarts = 50;
+        int max_steps_per_restart = n * 10;
+        int D = std::log2(n);
+        
+        for (int r = 0; r < max_restarts; ++r) {
+            std::u16string curr_state = start;
+            std::vector<std::pair<int, int>> current_swaps;
+            std::unordered_set<std::u16string> tabu_list;
+            tabu_list.insert(curr_state);
+
+            for (int step = 0; step < max_steps_per_restart; ++step) {
+                if (curr_state == target) {
+                    swap_order = current_swaps;
+                    return true;
+                }
+
+                // --- O(1) Delta Update Pre-computation ---
+                int base_cycles = 0;
+                std::vector<int> cycle_id(n, -1);
+                for (int i = 0; i < n; ++i) {
+                    if (cycle_id[i] == -1) {
+                        base_cycles++;
+                        int c = i;
+                        while (cycle_id[c] == -1) {
+                            cycle_id[c] = base_cycles;
+                            c = static_cast<int>(static_cast<char16_t>(curr_state[c]));
+                        }
+                    }
+                }
+                int base_group_swaps = n - base_cycles;
+
+                int base_distance = 0;
+                std::vector<int> error_counts(n, 0);
+                for (int k = 0; k < n; ++k) {
+                    int error = k ^ static_cast<int>(static_cast<char16_t>(curr_state[k])); 
+                    if (error != 0) error_counts[error]++;
+                    base_distance += __builtin_popcount(error);
+                }
+
+                double base_entropy = 0.0;
+                for (int k = 1; k < n; ++k) {
+                    if (error_counts[k] > 0) base_entropy += precomputed_entropy[error_counts[k]];
+                }
+                // -----------------------------------------
+
+                std::vector<std::pair<std::u16string, std::pair<int, int>>> neighbors;
+                std::vector<double> probabilities;
+                double sum_exp = 0.0;
+                double best_h = 1e9;
+
+                for (int i = 0; i < n; ++i) {
+                    for (int d = 0; d < D; ++d) {
+                        int j = i ^ (1 << d);
+                        if (i < j) {
+                            std::u16string next_state = curr_state;
+                            std::swap(next_state[i], next_state[j]);
+                            if (tabu_list.count(next_state)) continue;
+
+                            // -- O(1) Delta Update --
+                            int new_group_swaps = base_group_swaps;
+                            if (cycle_id[i] == cycle_id[j]) {
+                                new_group_swaps--;
+                            } else {
+                                new_group_swaps++;
+                            }
+
+                            int e_i = i ^ static_cast<int>(static_cast<char16_t>(curr_state[i]));
+                            int e_j = j ^ static_cast<int>(static_cast<char16_t>(curr_state[j]));
+                            int ne_i = i ^ static_cast<int>(static_cast<char16_t>(curr_state[j]));
+                            int ne_j = j ^ static_cast<int>(static_cast<char16_t>(curr_state[i]));
+                            
+                            int new_distance = base_distance 
+                                - __builtin_popcount(e_i) - __builtin_popcount(e_j) 
+                                + __builtin_popcount(ne_i) + __builtin_popcount(ne_j);
+
+                            double new_entropy = base_entropy;
+                            auto update_entropy = [&](int e, int delta) {
+                                if (e == 0) return;
+                                new_entropy -= precomputed_entropy[error_counts[e]];
+                                error_counts[e] += delta;
+                                new_entropy += precomputed_entropy[error_counts[e]];
+                            };
+                            
+                            update_entropy(e_i, -1);
+                            if (e_i != e_j) update_entropy(e_j, -1);
+                            else error_counts[e_i]--; 
+                            
+                            update_entropy(ne_i, 1);
+                            if (ne_i != ne_j) update_entropy(ne_j, 1);
+                            else error_counts[ne_i]++;
+
+                            double h = new_distance + new_group_swaps * 2.0 + (new_entropy / D) * 0.49;
+
+                            update_entropy(ne_i, -1);
+                            if (ne_i != ne_j) update_entropy(ne_j, -1);
+                            else error_counts[ne_i]--;
+                            
+                            update_entropy(e_i, 1);
+                            if (e_i != e_j) update_entropy(e_j, 1);
+                            else error_counts[e_i]++;
+
+                            if (h < best_h) best_h = h;
+                            
+                            neighbors.push_back({next_state, {i, j}});
+                            probabilities.push_back(h);
+                        }
+                    }
+                }
+
+                if (neighbors.empty()) break;
+
+                for (size_t k = 0; k < probabilities.size(); ++k) {
+                    double p = std::exp(-3.0 * (probabilities[k] - best_h)); 
+                    probabilities[k] = p;
+                    sum_exp += p;
+                }
+
+                double rand_val = (rand() / (double)RAND_MAX) * sum_exp;
+                double cumulative = 0.0;
+                int chosen = -1;
+                for (size_t k = 0; k < probabilities.size(); ++k) {
+                    cumulative += probabilities[k];
+                    if (rand_val <= cumulative) {
+                        chosen = k;
+                        break;
+                    }
+                }
+                if (chosen == -1) chosen = probabilities.size() - 1;
+
+                curr_state = neighbors[chosen].first;
+                current_swaps.push_back(neighbors[chosen].second);
+                tabu_list.insert(curr_state);
+            }
+        }
+        return false;
+    }
 };
 
 int main(int argc, char *argv[]) {
@@ -694,6 +835,9 @@ int main(int argc, char *argv[]) {
     } else if (algo == "beam_search") {
         std::vector<int> current_perm = perm;
         success = router.solveWithBeamSearch(current_perm, swap_order);
+    } else if (algo == "stochastic") {
+        std::vector<int> current_perm = perm;
+        success = router.solveWithStochasticSearch(current_perm, swap_order);
     } else {
         if (isTestMode) std::cout << "-1\n";
         else std::cerr << "Error: Unknown algorithm. Use bfs, merge, astar, entropy_cycle, or beam_search.\n";
@@ -713,6 +857,7 @@ int main(int argc, char *argv[]) {
                 else if (algo == "merge") algo_name = "Merge Sort";
                 else if (algo == "astar") algo_name = "A* Search";
                 else if (algo == "entropy_cycle") algo_name = "Entropy-Cycle Search";
+                else if (algo == "stochastic") algo_name = "Stochastic Search";
                 else if (algo == "aco") algo_name = "Ant Colony Optimization";
                 std::cout << "Target aligned using " << algo_name << ". Swaps required: " << swap_order.size() << "\n\n";
                 std::cout << "Swap Order Vector List:\n";

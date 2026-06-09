@@ -1,0 +1,127 @@
+--- entropy_cycle Statistical Summary ---
+Total Cases: 40320
+Mean: 6.77, Median: 7.00, Min: 0, Max: 12, Std Dev: 1.50
+Step Distribution:
+  0 steps: 1 cases
+  1 steps: 12 cases
+  2 steps: 90 cases
+  3 steps: 476 cases
+  4 steps: 1903 cases
+  5 steps: 5328 cases
+  6 steps: 9459 cases
+  7 steps: 10493 cases
+  8 steps: 7611 cases
+  9 steps: 3719 cases
+  10 steps: 1095 cases
+  11 steps: 132 cases
+  12 steps: 1 cases
+
+--- astar Statistical Summary ---
+Total Cases: 40320
+Mean: 6.62, Median: 7.00, Min: 0, Max: 16, Std Dev: 1.39
+Step Distribution:
+  0 steps: 1 cases
+  1 steps: 12 cases
+  2 steps: 90 cases
+  3 steps: 476 cases
+  4 steps: 1903 cases
+  5 steps: 5472 cases
+  6 steps: 10348 cases
+  7 steps: 11646 cases
+  8 steps: 7254 cases
+  9 steps: 2463 cases
+  10 steps: 551 cases
+  11 steps: 88 cases
+  12 steps: 12 cases
+  13 steps: 3 cases
+  16 steps: 1 cases
+
+--- stochastic Statistical Summary ---
+Total Cases: 40320
+Mean: 7.32, Median: 7.00, Min: 0, Max: 28, Std Dev: 2.15
+Step Distribution:
+  0 steps: 1 cases
+  1 steps: 12 cases
+  2 steps: 89 cases
+  3 steps: 469 cases
+  4 steps: 1744 cases
+  5 steps: 4569 cases
+  6 steps: 8110 cases
+  7 steps: 9062 cases
+  8 steps: 6987 cases
+  9 steps: 4161 cases
+  10 steps: 2176 cases
+  11 steps: 1266 cases
+  12 steps: 676 cases
+  13 steps: 396 cases
+  14 steps: 267 cases
+  15 steps: 150 cases
+  16 steps: 69 cases
+  17 steps: 46 cases
+  18 steps: 24 cases
+  19 steps: 20 cases
+  20 steps: 9 cases
+  21 steps: 8 cases
+  22 steps: 4 cases
+  23 steps: 1 cases
+  24 steps: 3 cases
+  28 steps: 1 cases
+
+--- bfs Statistical Summary ---
+Total Cases: 40320
+Mean: 6.61, Median: 7.00, Min: 0, Max: 12, Std Dev: 1.36
+Step Distribution:
+  0 steps: 1 cases
+  1 steps: 12 cases
+  2 steps: 90 cases
+  3 steps: 476 cases
+  4 steps: 1903 cases
+  5 steps: 5472 cases
+  6 steps: 10388 cases
+  7 steps: 11756 cases
+  8 steps: 7347 cases
+  9 steps: 2408 cases
+  10 steps: 430 cases
+  11 steps: 36 cases
+  12 steps: 1 cases
+
+--- merge Statistical Summary ---
+Total Cases: 40320
+Mean: 12.00, Median: 12.00, Min: 4, Max: 20, Std Dev: 2.18
+Step Distribution:
+  4 steps: 4 cases
+  5 steps: 32 cases
+  6 steps: 152 cases
+  7 steps: 528 cases
+  8 steps: 1404 cases
+  9 steps: 2928 cases
+  10 steps: 4880 cases
+  11 steps: 6592 cases
+  12 steps: 7280 cases
+  13 steps: 6592 cases
+  14 steps: 4880 cases
+  15 steps: 2928 cases
+  16 steps: 1404 cases
+  17 steps: 528 cases
+  18 steps: 152 cases
+  19 steps: 32 cases
+  20 steps: 4 cases
+
+--- beam_search Statistical Summary ---
+Total Cases: 40320
+Mean: 6.61, Median: 7.00, Min: 0, Max: 12, Std Dev: 1.36
+Step Distribution:
+  0 steps: 1 cases
+  1 steps: 12 cases
+  2 steps: 90 cases
+  3 steps: 476 cases
+  4 steps: 1903 cases
+  5 steps: 5472 cases
+  6 steps: 10388 cases
+  7 steps: 11756 cases
+  8 steps: 7347 cases
+  9 steps: 2408 cases
+  10 steps: 430 cases
+  11 steps: 36 cases
+  12 steps: 1 cases
+

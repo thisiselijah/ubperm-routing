@@ -14,30 +14,30 @@ class HypercubeRouter {
 private:
     int n;
     int bit_levels;
-    std::string start_state;
-    std::string target_state;
+    std::u16string start_state;
+    std::u16string target_state;
     std::vector<double> precomputed_entropy;
 
-    std::string pack_state(const std::vector<int>& perm) const {
-        std::string state;
+    std::u16string pack_state(const std::vector<int>& perm) const {
+        std::u16string state;
         state.reserve(perm.size());
         for (size_t i = 0; i < perm.size(); ++i) {
-            state.push_back(static_cast<char>(perm[i]));
+            state.push_back(static_cast<char16_t>(perm[i]));
         }
         return state;
     }
 
-    std::string get_target_state(int size) const {
-        std::string state;
+    std::u16string get_target_state(int size) const {
+        std::u16string state;
         state.reserve(size);
         for (int i = 0; i < size; ++i) {
-            state.push_back(static_cast<char>(i));
+            state.push_back(static_cast<char16_t>(i));
         }
         return state;
     }
 
     struct AStarState {
-        std::string state;
+        std::u16string state;
         int g;
         int f;
         bool operator>(const AStarState& other) const {
@@ -49,10 +49,10 @@ private:
         return __builtin_popcount(x);
     }
 
-    int computeHeuristic(const std::string& state) const {
+    int computeHeuristic(const std::u16string& state) const {
         int total_dist = 0;
         for (int i = 0; i < n; ++i) {
-            int val = static_cast<int>(static_cast<unsigned char>(state[i]));
+            int val = static_cast<int>(static_cast<char16_t>(state[i]));
             total_dist += popcount(i ^ val);
         }
         return (total_dist + 1) / 2;
@@ -86,8 +86,8 @@ public:
         std::vector<int> flat_swaps;
         if (start_state == target_state) return flat_swaps;
 
-        std::queue<std::string> q;
-        std::unordered_map<std::string, std::pair<std::string, std::pair<int, int>>> parent;
+        std::queue<std::u16string> q;
+        std::unordered_map<std::u16string, std::pair<std::u16string, std::pair<int, int>>> parent;
 
         q.push(start_state);
         parent[start_state] = {start_state, {-1, -1}};
@@ -95,7 +95,7 @@ public:
         bool found = false;
 
         while (!q.empty()) {
-            std::string curr = q.front();
+            std::u16string curr = q.front();
             q.pop();
 
             if (curr == target_state) {
@@ -107,7 +107,7 @@ public:
                 for (int b = 0; b < bit_levels; ++b) {
                     int j = i ^ (1 << b);
                     if (i < j) {
-                        std::string next_state = curr;
+                        std::u16string next_state = curr;
                         std::swap(next_state[i], next_state[j]);
 
                         if (parent.find(next_state) == parent.end()) {
@@ -121,7 +121,7 @@ public:
 
         if (found) {
             std::vector<std::pair<int, int>> swap_order;
-            std::string curr = target_state;
+            std::u16string curr = target_state;
             while (curr != start_state) {
                 auto p = parent[curr];
                 swap_order.push_back(p.second);
@@ -141,15 +141,15 @@ public:
         if (start_state == target_state) return flat_swaps;
 
         std::vector<int> target_inv_fwd(n);
-        for (int i = 0; i < n; ++i) target_inv_fwd[static_cast<unsigned char>(target_state[i])] = i;
+        for (int i = 0; i < n; ++i) target_inv_fwd[static_cast<char16_t>(target_state[i])] = i;
         
         std::vector<int> target_inv_bwd(n);
-        for (int i = 0; i < n; ++i) target_inv_bwd[static_cast<unsigned char>(start_state[i])] = i;
+        for (int i = 0; i < n; ++i) target_inv_bwd[static_cast<char16_t>(start_state[i])] = i;
 
-        auto calc_h = [&](const std::string& state, const std::vector<int>& inv) {
+        auto calc_h = [&](const std::u16string& state, const std::vector<int>& inv) {
             int dist = 0;
             for (int i = 0; i < n; ++i) {
-                int p = static_cast<unsigned char>(state[i]);
+                int p = static_cast<char16_t>(state[i]);
                 int target_pos = inv[p];
                 dist += __builtin_popcount(i ^ target_pos);
             }
@@ -157,8 +157,8 @@ public:
         };
 
         std::priority_queue<AStarState, std::vector<AStarState>, std::greater<AStarState>> pq_fwd, pq_bwd;
-        std::unordered_map<std::string, int> g_fwd, g_bwd;
-        std::unordered_map<std::string, std::pair<std::string, std::pair<int, int>>> parent_fwd, parent_bwd;
+        std::unordered_map<std::u16string, int> g_fwd, g_bwd;
+        std::unordered_map<std::u16string, std::pair<std::u16string, std::pair<int, int>>> parent_fwd, parent_bwd;
 
         pq_fwd.push({start_state, 0, calc_h(start_state, target_inv_fwd)});
         g_fwd[start_state] = 0;
@@ -169,7 +169,7 @@ public:
         parent_bwd[target_state] = {target_state, {-1, -1}};
 
         int best_cost = 1e9;
-        std::string meet_node = "";
+        std::u16string meet_node = u"";
 
         while (!pq_fwd.empty() && !pq_bwd.empty()) {
             if (pq_fwd.top().f + pq_bwd.top().f >= best_cost) break;
@@ -182,7 +182,7 @@ public:
                     for (int b = 0; b < bit_levels; ++b) {
                         int j = i ^ (1 << b);
                         if (i < j) {
-                            std::string next_state = curr_f.state;
+                            std::u16string next_state = curr_f.state;
                             std::swap(next_state[i], next_state[j]);
                             int ten_g = curr_f.g + 1;
                             
@@ -212,7 +212,7 @@ public:
                     for (int b = 0; b < bit_levels; ++b) {
                         int j = i ^ (1 << b);
                         if (i < j) {
-                            std::string next_state = curr_b.state;
+                            std::u16string next_state = curr_b.state;
                             std::swap(next_state[i], next_state[j]);
                             int ten_g = curr_b.g + 1;
                             
@@ -235,9 +235,9 @@ public:
             }
         }
 
-        if (meet_node != "") {
+        if (meet_node != u"") {
             std::vector<std::pair<int, int>> swap_order;
-            std::string curr = meet_node;
+            std::u16string curr = meet_node;
             while (curr != start_state) {
                 auto p = parent_fwd[curr];
                 swap_order.push_back(p.second);
@@ -286,7 +286,7 @@ public:
 
     // Removed calculateCycleHeuristic
 
-    double calculateEntropyCycleHeuristic(const std::string& state, int curr_g = 0) const {
+    double calculateEntropyCycleHeuristic(const std::u16string& state, int curr_g = 0) const {
         int cycles = 0;
         bool visited[256] = {false};
         for (int i = 0; i < n; i++) {
@@ -295,7 +295,7 @@ public:
                 int curr = i;
                 while (!visited[curr]) {
                     visited[curr] = true;
-                    curr = static_cast<int>(static_cast<unsigned char>(state[curr]));
+                    curr = static_cast<int>(static_cast<char16_t>(state[curr]));
                 }
             }
         }
@@ -304,7 +304,7 @@ public:
         double total_distance = 0;
         int error_counts[256] = {0};
         for (int i = 0; i < n; ++i) {
-            int error = i ^ static_cast<int>(static_cast<unsigned char>(state[i])); 
+            int error = i ^ static_cast<int>(static_cast<char16_t>(state[i])); 
             if (error != 0) {
                 error_counts[error]++;
             }
@@ -333,12 +333,12 @@ public:
 
     std::vector<int> solveWithEntropyCycle(std::vector<int> current_perm) {
         std::vector<int> flat_swaps;
-        std::string start = pack_state(current_perm);
+        std::u16string start = pack_state(current_perm);
         if (start == target_state) return flat_swaps;
 
-        std::priority_queue<std::pair<double, std::string>, std::vector<std::pair<double, std::string>>, std::greater<std::pair<double, std::string>>> pq;
-        std::unordered_map<std::string, std::pair<std::string, std::pair<int, int>>> parent;
-        std::unordered_map<std::string, int> g_score;
+        std::priority_queue<std::pair<double, std::u16string>, std::vector<std::pair<double, std::u16string>>, std::greater<std::pair<double, std::u16string>>> pq;
+        std::unordered_map<std::u16string, std::pair<std::u16string, std::pair<int, int>>> parent;
+        std::unordered_map<std::u16string, int> g_score;
 
         pq.push({calculateEntropyCycleHeuristic(start, 0), start});
         parent[start] = {start, {-1, -1}};
@@ -349,7 +349,7 @@ public:
         const int MAX_EXPANSIONS = 500000;
 
         while (!pq.empty() && expansions < MAX_EXPANSIONS) {
-            std::string curr = pq.top().second;
+            std::u16string curr = pq.top().second;
             pq.pop();
             
             if (curr == target_state) {
@@ -368,7 +368,7 @@ public:
                     int c = k;
                     while (cycle_id[c] == -1) {
                         cycle_id[c] = base_cycles;
-                        c = static_cast<int>(static_cast<unsigned char>(curr[c]));
+                        c = static_cast<int>(static_cast<char16_t>(curr[c]));
                     }
                     base_cycles++;
                 }
@@ -378,7 +378,7 @@ public:
             int base_distance = 0;
             std::vector<int> error_counts(256, 0);
             for (int k = 0; k < n; ++k) {
-                int error = k ^ static_cast<int>(static_cast<unsigned char>(curr[k])); 
+                int error = k ^ static_cast<int>(static_cast<char16_t>(curr[k])); 
                 if (error != 0) error_counts[error]++;
                 base_distance += __builtin_popcount(error);
             }
@@ -393,7 +393,7 @@ public:
                 for (int b = 0; b < bit_levels; ++b) {
                     int j = i ^ (1 << b);
                     if (i < j) {
-                        std::string next_state = curr;
+                        std::u16string next_state = curr;
                         std::swap(next_state[i], next_state[j]);
 
                         int tentative_g = curr_g + 1;
@@ -407,10 +407,10 @@ public:
                                 new_group_swaps++;
                             }
 
-                            int e_i = i ^ static_cast<int>(static_cast<unsigned char>(curr[i]));
-                            int e_j = j ^ static_cast<int>(static_cast<unsigned char>(curr[j]));
-                            int ne_i = i ^ static_cast<int>(static_cast<unsigned char>(curr[j]));
-                            int ne_j = j ^ static_cast<int>(static_cast<unsigned char>(curr[i]));
+                            int e_i = i ^ static_cast<int>(static_cast<char16_t>(curr[i]));
+                            int e_j = j ^ static_cast<int>(static_cast<char16_t>(curr[j]));
+                            int ne_i = i ^ static_cast<int>(static_cast<char16_t>(curr[j]));
+                            int ne_j = j ^ static_cast<int>(static_cast<char16_t>(curr[i]));
                             
                             int new_distance = base_distance 
                                 - __builtin_popcount(e_i) - __builtin_popcount(e_j) 
@@ -457,7 +457,7 @@ public:
 
         if (found) {
             std::vector<std::pair<int, int>> swap_order;
-            std::string curr = target_state;
+            std::u16string curr = target_state;
             while (curr != start) {
                 auto p = parent[curr];
                 swap_order.push_back(p.second);
@@ -475,9 +475,9 @@ public:
     }
 
     struct BeamNode {
-        std::string state;
+        std::u16string state;
         double h;
-        std::string parent_state;
+        std::u16string parent_state;
         std::pair<int, int> move;
 
         bool operator<(const BeamNode& other) const {
@@ -487,19 +487,19 @@ public:
 
     std::vector<int> solveWithBeamSearch(std::vector<int> current_perm) {
         std::vector<int> flat_swaps;
-        std::string start = pack_state(current_perm);
+        std::u16string start = pack_state(current_perm);
         if (start == target_state) return flat_swaps;
 
         int beam_width = 100;
         int max_depth = n * 20;
 
-        std::vector<std::string> beam;
+        std::vector<std::u16string> beam;
         beam.push_back(start);
         
-        std::unordered_set<std::string> global_visited;
+        std::unordered_set<std::u16string> global_visited;
         global_visited.insert(start);
         
-        std::unordered_map<std::string, std::pair<std::string, std::pair<int, int>>> parent;
+        std::unordered_map<std::u16string, std::pair<std::u16string, std::pair<int, int>>> parent;
         parent[start] = {start, {-1, -1}};
 
         for (int depth = 0; depth < max_depth; ++depth) {
@@ -508,7 +508,7 @@ public:
             for (const auto& curr_state : beam) {
                 if (curr_state == target_state) {
                     std::vector<std::pair<int, int>> swap_order;
-                    std::string curr = curr_state;
+                    std::u16string curr = curr_state;
                     while (curr != start) {
                         auto p = parent[curr];
                         swap_order.push_back(p.second);
@@ -530,7 +530,7 @@ public:
                         int c = k;
                         while (cycle_id[c] == -1) {
                             cycle_id[c] = base_cycles;
-                            c = static_cast<int>(static_cast<unsigned char>(curr_state[c]));
+                            c = static_cast<int>(static_cast<char16_t>(curr_state[c]));
                         }
                         base_cycles++;
                     }
@@ -540,7 +540,7 @@ public:
                 int base_distance = 0;
                 std::vector<int> error_counts(256, 0);
                 for (int k = 0; k < n; ++k) {
-                    int error = k ^ static_cast<int>(static_cast<unsigned char>(curr_state[k])); 
+                    int error = k ^ static_cast<int>(static_cast<char16_t>(curr_state[k])); 
                     if (error != 0) error_counts[error]++;
                     base_distance += __builtin_popcount(error);
                 }
@@ -555,7 +555,7 @@ public:
                     for (int b = 0; b < bit_levels; ++b) {
                         int j = i ^ (1 << b);
                         if (i < j) {
-                            std::string next_state = curr_state;
+                            std::u16string next_state = curr_state;
                             std::swap(next_state[i], next_state[j]);
 
                             if (global_visited.find(next_state) == global_visited.end()) {
@@ -567,10 +567,10 @@ public:
                                     new_group_swaps++;
                                 }
 
-                                int e_i = i ^ static_cast<int>(static_cast<unsigned char>(curr_state[i]));
-                                int e_j = j ^ static_cast<int>(static_cast<unsigned char>(curr_state[j]));
-                                int ne_i = i ^ static_cast<int>(static_cast<unsigned char>(curr_state[j]));
-                                int ne_j = j ^ static_cast<int>(static_cast<unsigned char>(curr_state[i]));
+                                int e_i = i ^ static_cast<int>(static_cast<char16_t>(curr_state[i]));
+                                int e_j = j ^ static_cast<int>(static_cast<char16_t>(curr_state[j]));
+                                int ne_i = i ^ static_cast<int>(static_cast<char16_t>(curr_state[j]));
+                                int ne_j = j ^ static_cast<int>(static_cast<char16_t>(curr_state[i]));
                                 
                                 int new_distance = base_distance 
                                     - __builtin_popcount(e_i) - __builtin_popcount(e_j) 
@@ -631,6 +631,152 @@ public:
         flat_swaps.push_back(-1);
         return flat_swaps;
     }
+std::vector<int> solveWithStochasticSearch(std::vector<int>& current_perm) {
+        std::vector<int> flat_swaps;
+        std::u16string target = get_target_state(n);
+        std::u16string start = pack_state(current_perm);
+        if (start == target) return flat_swaps;
+
+        int max_restarts = 50;
+        int max_steps_per_restart = n * 10;
+        int D = std::log2(n);
+        
+        for (int r = 0; r < max_restarts; ++r) {
+            std::u16string curr_state = start;
+            std::vector<std::pair<int, int>> current_swaps;
+            std::unordered_set<std::u16string> tabu_list;
+            tabu_list.insert(curr_state);
+
+            for (int step = 0; step < max_steps_per_restart; ++step) {
+                if (curr_state == target) {
+                    for (const auto& s : current_swaps) {
+                        flat_swaps.push_back(s.first);
+                        flat_swaps.push_back(s.second);
+                    }
+                    return flat_swaps;
+                }
+
+                // --- O(1) Delta Update Pre-computation ---
+                int base_cycles = 0;
+                std::vector<int> cycle_id(n, -1);
+                for (int i = 0; i < n; ++i) {
+                    if (cycle_id[i] == -1) {
+                        base_cycles++;
+                        int c = i;
+                        while (cycle_id[c] == -1) {
+                            cycle_id[c] = base_cycles;
+                            c = static_cast<int>(static_cast<char16_t>(curr_state[c]));
+                        }
+                    }
+                }
+                int base_group_swaps = n - base_cycles;
+
+                int base_distance = 0;
+                std::vector<int> error_counts(n, 0);
+                for (int k = 0; k < n; ++k) {
+                    int error = k ^ static_cast<int>(static_cast<char16_t>(curr_state[k])); 
+                    if (error != 0) error_counts[error]++;
+                    base_distance += __builtin_popcount(error);
+                }
+
+                double base_entropy = 0.0;
+                for (int k = 1; k < n; ++k) {
+                    if (error_counts[k] > 0) base_entropy += precomputed_entropy[error_counts[k]];
+                }
+                // -----------------------------------------
+
+                std::vector<std::pair<std::u16string, std::pair<int, int>>> neighbors;
+                std::vector<double> probabilities;
+                double sum_exp = 0.0;
+                double best_h = 1e9;
+
+                for (int i = 0; i < n; ++i) {
+                    for (int d = 0; d < D; ++d) {
+                        int j = i ^ (1 << d);
+                        if (i < j) {
+                            std::u16string next_state = curr_state;
+                            std::swap(next_state[i], next_state[j]);
+                            if (tabu_list.count(next_state)) continue;
+
+                            // -- O(1) Delta Update --
+                            int new_group_swaps = base_group_swaps;
+                            if (cycle_id[i] == cycle_id[j]) {
+                                new_group_swaps--;
+                            } else {
+                                new_group_swaps++;
+                            }
+
+                            int e_i = i ^ static_cast<int>(static_cast<char16_t>(curr_state[i]));
+                            int e_j = j ^ static_cast<int>(static_cast<char16_t>(curr_state[j]));
+                            int ne_i = i ^ static_cast<int>(static_cast<char16_t>(curr_state[j]));
+                            int ne_j = j ^ static_cast<int>(static_cast<char16_t>(curr_state[i]));
+                            
+                            int new_distance = base_distance 
+                                - __builtin_popcount(e_i) - __builtin_popcount(e_j) 
+                                + __builtin_popcount(ne_i) + __builtin_popcount(ne_j);
+
+                            double new_entropy = base_entropy;
+                            auto update_entropy = [&](int e, int delta) {
+                                if (e == 0) return;
+                                new_entropy -= precomputed_entropy[error_counts[e]];
+                                error_counts[e] += delta;
+                                new_entropy += precomputed_entropy[error_counts[e]];
+                            };
+                            
+                            update_entropy(e_i, -1);
+                            if (e_i != e_j) update_entropy(e_j, -1);
+                            else error_counts[e_i]--; 
+                            
+                            update_entropy(ne_i, 1);
+                            if (ne_i != ne_j) update_entropy(ne_j, 1);
+                            else error_counts[ne_i]++;
+
+                            double h = new_distance + new_group_swaps * 2.0 + (new_entropy / D) * 0.49;
+
+                            update_entropy(ne_i, -1);
+                            if (ne_i != ne_j) update_entropy(ne_j, -1);
+                            else error_counts[ne_i]--;
+                            
+                            update_entropy(e_i, 1);
+                            if (e_i != e_j) update_entropy(e_j, 1);
+                            else error_counts[e_i]++;
+
+                            if (h < best_h) best_h = h;
+                            
+                            neighbors.push_back({next_state, {i, j}});
+                            probabilities.push_back(h);
+                        }
+                    }
+                }
+
+                if (neighbors.empty()) break;
+
+                for (size_t k = 0; k < probabilities.size(); ++k) {
+                    double p = std::exp(-3.0 * (probabilities[k] - best_h)); 
+                    probabilities[k] = p;
+                    sum_exp += p;
+                }
+
+                double rand_val = (rand() / (double)RAND_MAX) * sum_exp;
+                double cumulative = 0.0;
+                int chosen = -1;
+                for (size_t k = 0; k < probabilities.size(); ++k) {
+                    cumulative += probabilities[k];
+                    if (rand_val <= cumulative) {
+                        chosen = k;
+                        break;
+                    }
+                }
+                if (chosen == -1) chosen = probabilities.size() - 1;
+
+                curr_state = neighbors[chosen].first;
+                current_swaps.push_back(neighbors[chosen].second);
+                tabu_list.insert(curr_state);
+            }
+        }
+        flat_swaps.push_back(-1);
+        return flat_swaps;
+    }
 };
 
 std::vector<int> route_packets(std::string algo, std::vector<int> perm) {
@@ -647,12 +793,14 @@ std::vector<int> route_packets(std::string algo, std::vector<int> perm) {
         return router.solveWithEntropyCycle(perm);
     } else if (algo == "beam_search") {
         return router.solveWithBeamSearch(perm);
+    } else if (algo == "stochastic") {
+        return router.solveWithStochasticSearch(perm);
     } else {
         return {-1};
     }
 }
 
 EMSCRIPTEN_BINDINGS(my_module) {
-    register_vector<int>("VectorInt");
-    function("route_packets", &route_packets);
+    emscripten::register_vector<int>("VectorInt");
+    emscripten::function("route_packets", &route_packets);
 }
