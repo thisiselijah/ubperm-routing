@@ -2,9 +2,11 @@
 #include <vector>
 #include <queue>
 #include <unordered_map>
+#include <unordered_set>
 #include <cmath>
 #include <algorithm>
 #include <cstdint>
+#include <random>
 
 using namespace emscripten;
 
@@ -138,64 +140,124 @@ public:
         std::vector<int> flat_swaps;
         if (start_state == target_state) return flat_swaps;
 
-        std::priority_queue<AStarState, std::vector<AStarState>, std::greater<AStarState>> pq;
-        std::unordered_map<std::string, int> g_score;
-        std::unordered_map<std::string, std::pair<std::string, std::pair<int, int>>> parent;
+        std::vector<int> target_inv_fwd(n);
+        for (int i = 0; i < n; ++i) target_inv_fwd[static_cast<unsigned char>(target_state[i])] = i;
+        
+        std::vector<int> target_inv_bwd(n);
+        for (int i = 0; i < n; ++i) target_inv_bwd[static_cast<unsigned char>(start_state[i])] = i;
 
-        int h_start = computeHeuristic(start_state);
-        pq.push({start_state, 0, h_start});
-        g_score[start_state] = 0;
-        parent[start_state] = {start_state, {-1, -1}};
+        auto calc_h = [&](const std::string& state, const std::vector<int>& inv) {
+            int dist = 0;
+            for (int i = 0; i < n; ++i) {
+                int p = static_cast<unsigned char>(state[i]);
+                int target_pos = inv[p];
+                dist += __builtin_popcount(i ^ target_pos);
+            }
+            return dist / 2;
+        };
 
-        bool found = false;
+        std::priority_queue<AStarState, std::vector<AStarState>, std::greater<AStarState>> pq_fwd, pq_bwd;
+        std::unordered_map<std::string, int> g_fwd, g_bwd;
+        std::unordered_map<std::string, std::pair<std::string, std::pair<int, int>>> parent_fwd, parent_bwd;
 
-        while (!pq.empty()) {
-            AStarState curr = pq.top();
-            pq.pop();
+        pq_fwd.push({start_state, 0, calc_h(start_state, target_inv_fwd)});
+        g_fwd[start_state] = 0;
+        parent_fwd[start_state] = {start_state, {-1, -1}};
 
-            std::string curr_state = curr.state;
+        pq_bwd.push({target_state, 0, calc_h(target_state, target_inv_bwd)});
+        g_bwd[target_state] = 0;
+        parent_bwd[target_state] = {target_state, {-1, -1}};
 
-            if (curr_state == target_state) {
-                found = true;
-                break;
+        int best_cost = 1e9;
+        std::string meet_node = "";
+
+        while (!pq_fwd.empty() && !pq_bwd.empty()) {
+            if (pq_fwd.top().f + pq_bwd.top().f >= best_cost) break;
+
+            AStarState curr_f = pq_fwd.top();
+            pq_fwd.pop();
+            
+            if (curr_f.g <= g_fwd[curr_f.state]) {
+                for (int i = 0; i < n; ++i) {
+                    for (int b = 0; b < bit_levels; ++b) {
+                        int j = i ^ (1 << b);
+                        if (i < j) {
+                            std::string next_state = curr_f.state;
+                            std::swap(next_state[i], next_state[j]);
+                            int ten_g = curr_f.g + 1;
+                            
+                            if (g_fwd.find(next_state) == g_fwd.end() || ten_g < g_fwd[next_state]) {
+                                g_fwd[next_state] = ten_g;
+                                parent_fwd[next_state] = {curr_f.state, {i, j}};
+                                pq_fwd.push({next_state, ten_g, ten_g + calc_h(next_state, target_inv_fwd)});
+                                
+                                if (g_bwd.count(next_state)) {
+                                    int cost = ten_g + g_bwd[next_state];
+                                    if (cost < best_cost) {
+                                        best_cost = cost;
+                                        meet_node = next_state;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
-            if (curr.g > g_score[curr_state]) continue;
-
-            for (int i = 0; i < n; ++i) {
-                for (int b = 0; b < bit_levels; ++b) {
-                    int j = i ^ (1 << b);
-                    if (i < j) {
-                        std::string next_state = curr_state;
-                        std::swap(next_state[i], next_state[j]);
-
-                        int tentative_g = curr.g + 1;
-                        if (g_score.find(next_state) == g_score.end() || tentative_g < g_score[next_state]) {
-                            g_score[next_state] = tentative_g;
-                            parent[next_state] = {curr_state, {i, j}};
-                            int h = computeHeuristic(next_state);
-                            pq.push({next_state, tentative_g, tentative_g + h});
+            AStarState curr_b = pq_bwd.top();
+            pq_bwd.pop();
+            
+            if (curr_b.g <= g_bwd[curr_b.state]) {
+                for (int i = 0; i < n; ++i) {
+                    for (int b = 0; b < bit_levels; ++b) {
+                        int j = i ^ (1 << b);
+                        if (i < j) {
+                            std::string next_state = curr_b.state;
+                            std::swap(next_state[i], next_state[j]);
+                            int ten_g = curr_b.g + 1;
+                            
+                            if (g_bwd.find(next_state) == g_bwd.end() || ten_g < g_bwd[next_state]) {
+                                g_bwd[next_state] = ten_g;
+                                parent_bwd[next_state] = {curr_b.state, {i, j}};
+                                pq_bwd.push({next_state, ten_g, ten_g + calc_h(next_state, target_inv_bwd)});
+                                
+                                if (g_fwd.count(next_state)) {
+                                    int cost = ten_g + g_fwd[next_state];
+                                    if (cost < best_cost) {
+                                        best_cost = cost;
+                                        meet_node = next_state;
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
         }
 
-        if (found) {
+        if (meet_node != "") {
             std::vector<std::pair<int, int>> swap_order;
-            std::string curr = target_state;
+            std::string curr = meet_node;
             while (curr != start_state) {
-                auto p = parent[curr];
+                auto p = parent_fwd[curr];
                 swap_order.push_back(p.second);
                 curr = p.first;
             }
             std::reverse(swap_order.begin(), swap_order.end());
-            for (auto& p : swap_order) {
+            
+            curr = meet_node;
+            while (curr != target_state) {
+                auto p = parent_bwd[curr];
+                swap_order.push_back(p.second);
+                curr = p.first;
+            }
+
+            for (auto p : swap_order) {
                 flat_swaps.push_back(p.first);
                 flat_swaps.push_back(p.second);
             }
         } else {
-            flat_swaps.push_back(-1);
+            flat_swaps.push_back(-1); // Indicator of failure
         }
         return flat_swaps;
     }
@@ -336,6 +398,91 @@ public:
         }
         return flat_swaps;
     }
+
+    struct BeamNode {
+        std::string state;
+        double h;
+        std::string parent_state;
+        std::pair<int, int> move;
+
+        bool operator<(const BeamNode& other) const {
+            return h < other.h;
+        }
+    };
+
+    std::vector<int> solveWithBeamSearch(std::vector<int> current_perm) {
+        std::vector<int> flat_swaps;
+        std::string start = pack_state(current_perm);
+        if (start == target_state) return flat_swaps;
+
+        int beam_width = 100;
+        int max_depth = n * 20;
+
+        std::vector<std::string> beam;
+        beam.push_back(start);
+        
+        std::unordered_set<std::string> global_visited;
+        global_visited.insert(start);
+        
+        std::unordered_map<std::string, std::pair<std::string, std::pair<int, int>>> parent;
+        parent[start] = {start, {-1, -1}};
+
+        for (int depth = 0; depth < max_depth; ++depth) {
+            std::vector<BeamNode> next_candidates;
+            
+            for (const auto& curr_state : beam) {
+                if (curr_state == target_state) {
+                    std::vector<std::pair<int, int>> swap_order;
+                    std::string curr = curr_state;
+                    while (curr != start) {
+                        auto p = parent[curr];
+                        swap_order.push_back(p.second);
+                        curr = p.first;
+                    }
+                    std::reverse(swap_order.begin(), swap_order.end());
+                    for (auto& p : swap_order) {
+                        flat_swaps.push_back(p.first);
+                        flat_swaps.push_back(p.second);
+                    }
+                    return flat_swaps;
+                }
+
+                for (int i = 0; i < n; ++i) {
+                    for (int b = 0; b < bit_levels; ++b) {
+                        int j = i ^ (1 << b);
+                        if (i < j) {
+                            std::string next_state = curr_state;
+                            std::swap(next_state[i], next_state[j]);
+
+                            if (global_visited.find(next_state) == global_visited.end()) {
+                                double h = calculateEntropyCycleHeuristic(next_state, depth + 1);
+                                next_candidates.push_back({next_state, h, curr_state, {i, j}});
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (next_candidates.empty()) break;
+
+            int keep = std::min((int)next_candidates.size(), beam_width * 2);
+            std::partial_sort(next_candidates.begin(), next_candidates.begin() + keep, next_candidates.end());
+            
+            beam.clear();
+            for (int k = 0; k < next_candidates.size(); ++k) {
+                const auto& cand = next_candidates[k];
+                if (global_visited.find(cand.state) == global_visited.end()) {
+                    global_visited.insert(cand.state);
+                    parent[cand.state] = {cand.parent_state, cand.move};
+                    beam.push_back(cand.state);
+                    if (beam.size() >= beam_width) break;
+                }
+            }
+        }
+        
+        flat_swaps.push_back(-1);
+        return flat_swaps;
+    }
 };
 
 std::vector<int> route_packets(std::string algo, std::vector<int> perm) {
@@ -350,8 +497,11 @@ std::vector<int> route_packets(std::string algo, std::vector<int> perm) {
         return router.solveWithAStar();
     } else if (algo == "entropy_cycle") {
         return router.solveWithEntropyCycle(perm);
+    } else if (algo == "beam_search") {
+        return router.solveWithBeamSearch(perm);
+    } else {
+        return {-1};
     }
-    return {-1};
 }
 
 EMSCRIPTEN_BINDINGS(my_module) {

@@ -13,7 +13,7 @@ interface AppState {
 export default function Home() {
   const [displayMethod, setDisplayMethod] = useState<'text' | 'color'>('text');
   const [shuffleTrigger, setShuffleTrigger] = useState(0);
-  const [algo, setAlgo] = useState<'merge' | 'bfs' | 'astar' | 'entropy_cycle'>('merge');
+  const [algo, setAlgo] = useState<'merge' | 'bfs' | 'astar' | 'entropy_cycle' | 'beam_search'>('merge');
   const [isRouting, setIsRouting] = useState(false);
   const [activeSwap, setActiveSwap] = useState<{ node1: number, node2: number } | null>(null);
   const [swapList, setSwapList] = useState<{ node1: number, node2: number }[]>([]);
@@ -229,6 +229,11 @@ export default function Home() {
                   disabled={isRouting}
                   className={`px-4 py-1.5 text-[12px] font-heading font-bold uppercase border border-black ${algo === 'entropy_cycle' ? 'bg-black text-white' : 'bg-white text-black'} disabled:opacity-50`}
                 >Entropy-Cycle</button>
+                <button 
+                  onClick={() => setAlgo('beam_search')}
+                  disabled={isRouting}
+                  className={`px-4 py-1.5 text-[12px] font-heading font-bold uppercase border border-black ${algo === 'beam_search' ? 'bg-black text-white' : 'bg-white text-black'} disabled:opacity-50`}
+                >Beam Search</button>
             </div>
         </div>
 
