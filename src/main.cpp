@@ -20,24 +20,24 @@ class HypercubeRouter {
 private:
     int n;
     int bit_levels;
-    std::u16string start_state;
-    std::u16string target_state;
+    std::string start_state;
+    std::string target_state;
     std::vector<double> precomputed_entropy;
 
-    std::u16string pack_state(const std::vector<int>& perm) const {
-        std::u16string state;
+    std::string pack_state(const std::vector<int>& perm) const {
+        std::string state;
         state.reserve(perm.size());
         for (size_t i = 0; i < perm.size(); ++i) {
-            state.push_back(static_cast<char16_t>(perm[i]));
+            state.push_back(static_cast<unsigned char>(perm[i]));
         }
         return state;
     }
 
-    std::u16string get_target_state(int size) const {
-        std::u16string state;
+    std::string get_target_state(int size) const {
+        std::string state;
         state.reserve(size);
         for (int i = 0; i < size; ++i) {
-            state.push_back(static_cast<char16_t>(i));
+            state.push_back(static_cast<unsigned char>(i));
         }
         return state;
     }
@@ -46,16 +46,16 @@ private:
         return __builtin_popcount(x);
     }
 
-    std::vector<int> unpack_state(const std::u16string& state) const {
+    std::vector<int> unpack_state(const std::string& state) const {
         std::vector<int> perm(n);
         for (int i = 0; i < n; ++i) {
-            perm[i] = static_cast<int>(static_cast<char16_t>(state[i]));
+            perm[i] = static_cast<int>(static_cast<unsigned char>(state[i]));
         }
         return perm;
     }
 
     struct AStarState {
-        std::u16string state;
+        std::string state;
         int g;
         int f;
         bool operator>(const AStarState& other) const {
@@ -625,8 +625,8 @@ public:
         return false;
     }
 bool solveWithStochasticSearch(std::vector<int>& current_perm, std::vector<std::pair<int, int>>& swap_order) {
-        std::u16string target = get_target_state(n);
-        std::u16string start = pack_state(current_perm);
+        std::string target = get_target_state(n);
+        std::string start = pack_state(current_perm);
         if (start == target) return true;
 
         int max_restarts = 50;
@@ -634,9 +634,9 @@ bool solveWithStochasticSearch(std::vector<int>& current_perm, std::vector<std::
         int D = std::log2(n);
         
         for (int r = 0; r < max_restarts; ++r) {
-            std::u16string curr_state = start;
+            std::string curr_state = start;
             std::vector<std::pair<int, int>> current_swaps;
-            std::unordered_set<std::u16string> tabu_list;
+            std::unordered_set<std::string> tabu_list;
             tabu_list.insert(curr_state);
 
             for (int step = 0; step < max_steps_per_restart; ++step) {
@@ -654,7 +654,7 @@ bool solveWithStochasticSearch(std::vector<int>& current_perm, std::vector<std::
                         int c = i;
                         while (cycle_id[c] == -1) {
                             cycle_id[c] = base_cycles;
-                            c = static_cast<int>(static_cast<char16_t>(curr_state[c]));
+                            c = static_cast<int>(static_cast<unsigned char>(curr_state[c]));
                         }
                     }
                 }
@@ -663,7 +663,7 @@ bool solveWithStochasticSearch(std::vector<int>& current_perm, std::vector<std::
                 int base_distance = 0;
                 std::vector<int> error_counts(n, 0);
                 for (int k = 0; k < n; ++k) {
-                    int error = k ^ static_cast<int>(static_cast<char16_t>(curr_state[k])); 
+                    int error = k ^ static_cast<int>(static_cast<unsigned char>(curr_state[k])); 
                     if (error != 0) error_counts[error]++;
                     base_distance += __builtin_popcount(error);
                 }
@@ -674,7 +674,7 @@ bool solveWithStochasticSearch(std::vector<int>& current_perm, std::vector<std::
                 }
                 // -----------------------------------------
 
-                std::vector<std::pair<std::u16string, std::pair<int, int>>> neighbors;
+                std::vector<std::pair<std::string, std::pair<int, int>>> neighbors;
                 std::vector<double> probabilities;
                 double sum_exp = 0.0;
                 double best_h = 1e9;
@@ -683,7 +683,7 @@ bool solveWithStochasticSearch(std::vector<int>& current_perm, std::vector<std::
                     for (int d = 0; d < D; ++d) {
                         int j = i ^ (1 << d);
                         if (i < j) {
-                            std::u16string next_state = curr_state;
+                            std::string next_state = curr_state;
                             std::swap(next_state[i], next_state[j]);
                             if (tabu_list.count(next_state)) continue;
 
@@ -695,10 +695,10 @@ bool solveWithStochasticSearch(std::vector<int>& current_perm, std::vector<std::
                                 new_group_swaps++;
                             }
 
-                            int e_i = i ^ static_cast<int>(static_cast<char16_t>(curr_state[i]));
-                            int e_j = j ^ static_cast<int>(static_cast<char16_t>(curr_state[j]));
-                            int ne_i = i ^ static_cast<int>(static_cast<char16_t>(curr_state[j]));
-                            int ne_j = j ^ static_cast<int>(static_cast<char16_t>(curr_state[i]));
+                            int e_i = i ^ static_cast<int>(static_cast<unsigned char>(curr_state[i]));
+                            int e_j = j ^ static_cast<int>(static_cast<unsigned char>(curr_state[j]));
+                            int ne_i = i ^ static_cast<int>(static_cast<unsigned char>(curr_state[j]));
+                            int ne_j = j ^ static_cast<int>(static_cast<unsigned char>(curr_state[i]));
                             
                             int new_distance = base_distance 
                                 - __builtin_popcount(e_i) - __builtin_popcount(e_j) 

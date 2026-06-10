@@ -109,7 +109,11 @@ def main():
     os.makedirs("data", exist_ok=True)
     
     # 儲存結果到檔案
-    output_file = f"data/{args.algo}.txt"
+    if args.auto:
+        output_file = f"data/{args.algo}.txt"
+    else:
+        output_file = f"data/{args.cube}-cube-{args.algo}.txt"
+
     with open(output_file, "w") as f:
         for steps in valid_steps:
             f.write(f"{steps}\n")
