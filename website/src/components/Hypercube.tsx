@@ -108,7 +108,7 @@ const Node = ({ id, packet, position, displayMethod, shuffleTrigger, isSwapping,
           <div className="bg-white dark:bg-black text-black dark:text-white border border-black dark:border-white p-1 font-body text-[12px] whitespace-nowrap shadow-[2px_2px_0_rgba(0,0,0,1)] dark:shadow-[2px_2px_0_rgba(255,255,255,1)]">
             <div className="font-heading font-bold border-b border-black dark:border-white mb-1 pb-1 uppercase">Node {id}</div>
             <div className="flex gap-1">
-              Packet: <span key={isSwapping ? `swapping-${id}` : `${id}-${packet}`} className={(justFinished || justShuffled) && !isSwapping ? "text-[var(--color-primary)] font-bold animate-spin-packet inline-block" : "font-bold"}>{isSwapping ? <span className="opacity-50">...</span> : packet}</span>
+              Packet: <span key={isSwapping ? `swapping-${id}` : `${id}-${packet}`} className={`text-[var(--color-primary)] font-bold ${(justFinished || justShuffled) && !isSwapping ? "animate-spin-packet inline-block" : ""}`}>{isSwapping ? <span className="opacity-50">...</span> : packet}</span>
             </div>
           </div>
         ) : (

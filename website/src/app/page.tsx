@@ -203,7 +203,7 @@ export default function Home() {
   };
 
   return (
-    <main className={`h-screen w-screen flex flex-col lg:overflow-hidden overflow-y-auto ${isDarkMode ? 'dark bg-black' : 'bg-[var(--color-canvas)]'}`}>
+    <main className={`h-screen w-screen flex flex-col lg:overflow-hidden overflow-y-auto text-black dark:text-white ${isDarkMode ? 'dark bg-black' : 'bg-[var(--color-canvas)]'}`}>
       {/* Top Header */}
       <div className="shrink-0 h-16 bg-white dark:bg-black text-black dark:text-white px-4 md:px-6 flex items-center justify-between border-b-[4px] border-black dark:border-white dark:border-white z-30 sticky top-0">
         <h1 className="text-xl md:text-2xl font-display font-black uppercase m-0 leading-none truncate">Routing Visualizer</h1>
@@ -375,7 +375,7 @@ export default function Home() {
 
         {/* Canvas */}
         <div className="w-full h-[50vh] min-h-[400px] lg:h-full lg:min-h-0 p-4 lg:pt-8 lg:pb-8 lg:px-[352px]">
-          <div className="w-full h-full bg-white dark:bg-black border-4 border-black dark:border-white overflow-hidden relative shadow-[4px_4px_0_#000] dark:shadow-[4px_4px_0_#fff] lg:shadow-none">
+          <div className="w-full h-full bg-white dark:bg-black border-4 border-black dark:border-white overflow-hidden relative">
             <Canvas camera={{ position: [0, 0, 10], fov: 50 }}>
               <OrbitControls makeDefault />
               <Hypercube dimension={state.dimension} nodes={state.nodes} displayMethod={displayMethod} shuffleTrigger={shuffleTrigger} activeSwap={activeSwap} isDarkMode={isDarkMode} currentStep={currentStep} />
