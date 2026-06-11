@@ -629,7 +629,7 @@ bool solveWithStochasticSearch(std::vector<int>& current_perm, std::vector<std::
         std::string start = pack_state(current_perm);
         if (start == target) return true;
 
-        int max_restarts = 50;
+        int max_restarts = 200;
         int max_steps_per_restart = n * 10;
         int D = std::log2(n);
         
