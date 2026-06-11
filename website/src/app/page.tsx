@@ -3,6 +3,8 @@
 import { useEffect, useState, useRef } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
+import { animate } from 'animejs';
+import CuteHelper from '../components/CuteHelper';
 import Hypercube from "@/components/Hypercube";
 
 interface AppState {
@@ -169,6 +171,112 @@ export default function Home() {
     }
   }, [activeSwap, currentStep]);
 
+  // Animate the active step in the right panel list
+  useEffect(() => {
+    if (stepListRef.current && currentStep >= 0 && currentStep < swapList.length) {
+      const container = stepListRef.current;
+      const activeEl = container.children[currentStep] as HTMLElement;
+      if (activeEl) {
+        // Mechanical scroll to center
+        const targetScrollTop = activeEl.offsetTop - container.offsetTop - (container.clientHeight / 2) + (activeEl.clientHeight / 2);
+        
+        animate(container, {
+          scrollTop: targetScrollTop,
+          duration: 400,
+          ease: 'outExpo'
+        });
+
+        // Reset all other children
+        Array.from(container.children).forEach((child: Element, idx: number) => {
+          if (idx !== currentStep) {
+            animate(child, {
+              translateX: 0,
+              boxShadow: '0px 0px 0px rgba(0,0,0,0)',
+              duration: 200,
+              ease: 'outQuad'
+            });
+          }
+        });
+
+        // Punch out the active element with elastic Brutalism
+        const isDark = document.documentElement.classList.contains('dark');
+        animate(activeEl, {
+          translateX: -8,
+          boxShadow: isDark ? '8px 8px 0px #fff' : '8px 8px 0px #000',
+          duration: 500,
+          ease: 'easeOutElastic(1, .6)'
+        });
+      }
+    }
+  }, [currentStep, swapList.length]);
+
+  // Terminal blinking cursor for empty state
+  useEffect(() => {
+    if (swapList.length === 0) {
+      const cursor = document.querySelector('.cursor-blink');
+      if (cursor) {
+        const anim = animate(cursor, {
+          opacity: [1, 0],
+          loop: true,
+          duration: 800,
+          ease: 'steps(2)' // Hard mechanical blink
+        });
+        return () => { anim.pause(); };
+      }
+    }
+  }, [swapList.length]);
+
+  // Global Button Animations
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const isDarkModeCurrent = document.documentElement.classList.contains('dark');
+
+    const handleMouseOver = (e: MouseEvent) => {
+      const btn = (e.target as HTMLElement).closest('button, a.shrink-0');
+      if (!btn || (btn as HTMLButtonElement).disabled) return;
+      const related = (e.relatedTarget as HTMLElement)?.closest('button, a.shrink-0');
+      if (btn === related) return; // Still inside the same button
+      
+      animate(btn, { scale: 1.03, rotate: 0, duration: 200, ease: 'outExpo' });
+    };
+
+    const handleMouseOut = (e: MouseEvent) => {
+      const btn = (e.target as HTMLElement).closest('button, a.shrink-0');
+      if (!btn || (btn as HTMLButtonElement).disabled) return;
+      const related = (e.relatedTarget as HTMLElement)?.closest('button, a.shrink-0');
+      if (btn === related) return; // Still inside the same button
+      
+      animate(btn, { scale: 1, rotate: 0, duration: 200, ease: 'outExpo' });
+    };
+
+    const handleMouseDown = (e: MouseEvent) => {
+      const btn = (e.target as HTMLElement).closest('button, a.shrink-0');
+      if (!btn || (btn as HTMLButtonElement).disabled) return;
+      
+      animate(btn, { scale: 0.96, duration: 100, ease: 'outQuad' });
+    };
+
+    const handleMouseUp = (e: MouseEvent) => {
+      const btn = (e.target as HTMLElement).closest('button, a.shrink-0');
+      if (!btn || (btn as HTMLButtonElement).disabled) return;
+      
+      animate(btn, { scale: 1.03, duration: 200, ease: 'outExpo' });
+    };
+
+    document.addEventListener('mouseover', handleMouseOver);
+    document.addEventListener('mouseout', handleMouseOut);
+    document.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('mouseup', handleMouseUp);
+    
+    return () => {
+      document.removeEventListener('mouseover', handleMouseOver);
+      document.removeEventListener('mouseout', handleMouseOut);
+      document.removeEventListener('mousedown', handleMouseDown);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
+
   const handlePrevStep = () => {
     if (currentStep < 0) return;
     const swap = swapList[currentStep];
@@ -206,7 +314,9 @@ export default function Home() {
     <main className={`h-screen w-screen flex flex-col lg:overflow-hidden overflow-y-auto text-black dark:text-white ${isDarkMode ? 'dark bg-black' : 'bg-[var(--color-canvas)]'}`}>
       {/* Top Header */}
       <div className="shrink-0 h-16 bg-white dark:bg-black text-black dark:text-white px-4 md:px-6 flex items-center justify-between border-b-[4px] border-black dark:border-white dark:border-white z-30 sticky top-0">
-        <h1 className="text-xl md:text-2xl font-display font-black uppercase m-0 leading-none truncate">Routing Visualizer</h1>
+        <h1 className="text-lg sm:text-xl md:text-2xl font-display font-black uppercase m-0 leading-none truncate flex-1 min-w-0 mr-4">
+          Routing Visualizer
+        </h1>
         <div className="flex items-center gap-2">
           <button onClick={() => setIsDarkMode(!isDarkMode)} className="shrink-0 flex items-center gap-1 bg-black dark:bg-white text-white dark:text-black border border-black dark:border-white px-2 py-1 hover:opacity-80 transition-opacity">
             <span className="font-heading font-bold uppercase text-[12px] leading-none">{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>
@@ -223,7 +333,8 @@ export default function Home() {
       <div className="flex-1 relative flex flex-col lg:block">
 
         {/* Controls Panel */}
-        <div className="w-full lg:w-80 p-4 lg:p-8 lg:absolute lg:left-0 lg:top-0 z-10 lg:h-full lg:overflow-y-auto">
+        <div className="order-2 lg:order-none w-full lg:w-80 p-4 lg:p-8 lg:absolute lg:left-0 lg:top-0 z-10 lg:h-full lg:overflow-y-auto">
+          <CuteHelper />
           <div className="bg-white dark:bg-black p-4 shadow-[4px_4px_0_#000] dark:shadow-[4px_4px_0_#fff] border-2 border-black dark:border-white w-full">
         <div className="mb-4">
             <span className="block text-sm font-heading font-bold mb-1 uppercase">Dimension</span>
@@ -295,7 +406,7 @@ export default function Home() {
       </div>
 
         {/* Right panel: Swap Steps */}
-        <div className="w-full lg:w-80 p-4 lg:p-8 lg:absolute lg:right-0 lg:top-0 z-10 lg:h-full flex flex-col lg:items-end">
+        <div className="hidden lg:flex order-3 lg:order-none w-full lg:w-80 p-4 lg:p-8 lg:absolute lg:right-0 lg:top-0 z-10 lg:h-full flex-col lg:items-end">
           <div className="bg-white dark:bg-black border-2 border-black dark:border-white shadow-[4px_4px_0_#000] dark:shadow-[4px_4px_0_#fff] w-full flex flex-col h-[300px] lg:h-[calc(100vh-250px)] overflow-hidden">
             <div className="p-4 border-b-2 border-black dark:border-white bg-[var(--color-tint-periwinkle)] text-black">
               <div className="flex justify-between items-center">
@@ -312,7 +423,12 @@ export default function Home() {
                 </div>
               ))}
               {swapList.length === 0 && (
-                <div className="text-xs text-center italic py-4">No routing sequence active</div>
+                <div className="empty-state-text text-sm text-center font-heading font-bold py-10 tracking-widest text-black/50 dark:text-white/50 flex flex-col items-center justify-center gap-2">
+                  <div className="flex items-center gap-1">
+                    [ WAITING FOR SEQUENCE 
+                    <span className="cursor-blink w-2.5 h-4 bg-black/50 dark:bg-white/50 inline-block"></span> ]
+                  </div>
+                </div>
               )}
             </div>
           </div>
@@ -325,7 +441,7 @@ export default function Home() {
               <button 
                 onClick={() => { setIsPlaying(false); handlePrevStep(); }} 
                 disabled={currentStep < 0} 
-                className="flex-1 h-10 bg-[var(--color-tint-periwinkle)] text-black border-2 border-black dark:border-white flex items-center justify-center disabled:opacity-40 disabled:grayscale hover:bg-black dark:hover:bg-white hover:text-[var(--color-tint-periwinkle)] dark:hover:text-black transition-colors"
+                className="flex-1 h-10 bg-[var(--color-tint-periwinkle)] text-black border-2 border-black dark:border-white flex items-center justify-center disabled:opacity-40 disabled:grayscale transition-colors"
                 title="Previous Step"
               >
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
@@ -337,7 +453,7 @@ export default function Home() {
               <button 
                 onClick={() => setIsPlaying(!isPlaying)} 
                 disabled={currentStep < 0 && currentStep >= swapList.length - 1} 
-                className={`flex-[2] h-12 border-2 border-black dark:border-white flex items-center justify-center font-heading font-bold uppercase text-[12px] tracking-wider disabled:opacity-40 disabled:grayscale hover:opacity-80 transition-opacity ${isPlaying ? 'bg-black dark:bg-white text-white dark:text-black' : 'bg-[var(--color-primary)] text-white'}`}
+                className={`flex-[2] h-12 border-2 border-black dark:border-white flex items-center justify-center font-heading font-bold uppercase text-[12px] tracking-wider disabled:opacity-40 disabled:grayscale transition-colors ${isPlaying ? 'bg-black dark:bg-white text-white dark:text-black' : 'bg-[var(--color-primary)] text-white'}`}
                 title={isPlaying ? "Pause" : "Play"}
               >
                 {isPlaying ? (
@@ -361,7 +477,7 @@ export default function Home() {
               <button 
                 onClick={() => { setIsPlaying(false); handleNextStep(); }} 
                 disabled={currentStep >= swapList.length - 1} 
-                className="flex-1 h-10 bg-[var(--color-tint-periwinkle)] text-black border-2 border-black dark:border-white flex items-center justify-center disabled:opacity-40 disabled:grayscale hover:bg-black dark:hover:bg-white hover:text-[var(--color-tint-periwinkle)] dark:hover:text-black transition-colors"
+                className="flex-1 h-10 bg-[var(--color-tint-periwinkle)] text-black border-2 border-black dark:border-white flex items-center justify-center disabled:opacity-40 disabled:grayscale transition-colors"
                 title="Next Step"
               >
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
@@ -374,7 +490,7 @@ export default function Home() {
         </div>
 
         {/* Canvas */}
-        <div className="w-full h-[50vh] min-h-[400px] lg:h-full lg:min-h-0 p-4 lg:pt-8 lg:pb-8 lg:px-[352px]">
+        <div className="order-1 lg:order-none w-full h-[45vh] min-h-[350px] lg:h-full lg:min-h-0 p-4 lg:pt-8 lg:pb-8 lg:px-[352px]">
           <div className="w-full h-full bg-white dark:bg-black border-4 border-black dark:border-white overflow-hidden relative">
             <Canvas camera={{ position: [0, 0, 10], fov: 50 }}>
               <OrbitControls makeDefault />
