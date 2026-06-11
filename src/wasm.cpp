@@ -288,7 +288,7 @@ public:
 
     double calculateEntropyCycleHeuristic(const std::u16string& state, int curr_g = 0) const {
         int cycles = 0;
-        bool visited[256] = {false};
+        std::vector<bool> visited(n, false);
         for (int i = 0; i < n; i++) {
             if (!visited[i]) {
                 cycles++;
@@ -302,7 +302,7 @@ public:
         int group_swaps = n - cycles;
 
         double total_distance = 0;
-        int error_counts[256] = {0};
+        std::vector<int> error_counts(n, 0);
         for (int i = 0; i < n; ++i) {
             int error = i ^ static_cast<int>(static_cast<char16_t>(state[i])); 
             if (error != 0) {
@@ -313,7 +313,7 @@ public:
         }
 
         double entropy = 0.0;
-        for (int i = 1; i < 256; ++i) {
+        for (int i = 1; i < n; ++i) {
             if (error_counts[i] > 0) {
                 entropy += precomputed_entropy[error_counts[i]];
             }
@@ -324,7 +324,7 @@ public:
         // Strict Tie-Breaker: Entropy penalty is bounded < 0.5 to preserve Admissibility of base_heuristic
         double adaptive_weight = 0.05 + 0.005 * curr_g;
         if (adaptive_weight > 0.49) adaptive_weight = 0.49;
-        double entropy_penalty = (entropy / 8.0) * adaptive_weight;
+        double entropy_penalty = (entropy / (double)bit_levels) * adaptive_weight;
 
         return base_heuristic + entropy_penalty;
     }
@@ -376,7 +376,7 @@ public:
             int base_group_swaps = n - base_cycles;
 
             int base_distance = 0;
-            std::vector<int> error_counts(256, 0);
+            std::vector<int> error_counts(n, 0);
             for (int k = 0; k < n; ++k) {
                 int error = k ^ static_cast<int>(static_cast<char16_t>(curr[k])); 
                 if (error != 0) error_counts[error]++;
@@ -384,7 +384,7 @@ public:
             }
 
             double base_entropy = 0.0;
-            for (int k = 1; k < 256; ++k) {
+            for (int k = 1; k < n; ++k) {
                 if (error_counts[k] > 0) base_entropy += precomputed_entropy[error_counts[k]];
             }
             // ----------------------------------------
@@ -538,7 +538,7 @@ public:
                 int base_group_swaps = n - base_cycles;
 
                 int base_distance = 0;
-                std::vector<int> error_counts(256, 0);
+                std::vector<int> error_counts(n, 0);
                 for (int k = 0; k < n; ++k) {
                     int error = k ^ static_cast<int>(static_cast<char16_t>(curr_state[k])); 
                     if (error != 0) error_counts[error]++;
@@ -546,7 +546,7 @@ public:
                 }
 
                 double base_entropy = 0.0;
-                for (int k = 1; k < 256; ++k) {
+                for (int k = 1; k < n; ++k) {
                     if (error_counts[k] > 0) base_entropy += precomputed_entropy[error_counts[k]];
                 }
                 // ---------------------------------------------------------
